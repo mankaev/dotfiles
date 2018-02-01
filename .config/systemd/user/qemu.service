@@ -1,0 +1,9 @@
+[Unit]
+Description=QEMU virtual machine
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/env qemu-system-x86_64 -daemonize -enable-kvm -cpu host -name w7 -rtc base=localtime,clock=host,driftfix=slew -m 2G -drive file=%h/w7.raw,format=raw,if=none,aio=native,cache=none,id=drive-temp0 -device virtio-blk-pci,scsi=off,drive=drive-temp0,id=virtio-disk0,disable-legacy=on,disable-modern=off -device virtio-net-pci,netdev=mynet0,disable-legacy=on,disable-modern=off -netdev user,id=mynet0,hostfwd=tcp::3389-:3389 -monitor telnet:localhost:7100,server,nowait,nodelay -nodefaults -nographic
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,4 @@
+$include /etc/inputrc
+
+set -o pipefail
+set bell-style none

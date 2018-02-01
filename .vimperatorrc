@@ -1,0 +1,66 @@
+set incsearch
+set editor=emacsclient -n
+set gui=none
+set noerrorbells
+set status=tabcount
+set scrollbars=false
+highlight CompGroup font-size: 22px; font-family: "Pragmata Pro"
+highlight CmdLine font-size: 22px; font-family: "Pragmata Pro"; color: white;
+highlight CmdLine>* font-size: 22px; font-family: "Pragmata Pro"
+
+set hintchars=jfkdls;ahgnvmcieowurt
+
+map Ф A
+map И B
+map С C
+map В D
+map У E
+map А F
+map П G
+map Р H
+map Ж :
+map Ш I
+map О J
+map Л K
+map Д L
+map Ь M
+map Т N
+map Щ O
+map З P
+map Й Q
+map К R
+map Ы S
+map Е T
+map Г U
+map М V
+map Ц W
+map Ч X
+map Н Y
+map Я Z
+map ф a
+map и b
+map с c
+map в d
+map у e
+map а f
+map п g
+map р h
+map ш i
+map о j
+map л k
+map ж ;
+map д l
+map ь m
+map т n
+map щ o
+map з p
+map й q
+map к r
+map ы s
+map е t
+map г u
+map м v
+map ц w
+map ч x
+map н y
+map я z

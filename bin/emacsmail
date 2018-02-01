@@ -1,0 +1,2 @@
+#!/bin/sh
+emacsclient -n --eval "(mu4e~compose-browse-url-mail \"$@\")"

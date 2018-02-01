@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Transmission
+Exec=transmission-remote http://192.168.1.1:9091/transmission -a %U
+Terminal=false
+Type=Application
+MimeType=application/x-bittorrent;x-scheme-handler/magnet;

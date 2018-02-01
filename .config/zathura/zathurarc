@@ -1,0 +1,18 @@
+set font "PragmataPro 18"
+set adjust-open width
+set scroll-page-aware "true"
+set smooth-scroll "true"
+set guioptions ""
+set notification-warning-bg "#3f3f3f"
+set notification-error-bg "#3f3f3f"
+set default-bg "#3f3f3f"
+set default-fg "#dcdccc"
+set inputbar-bg "#3f3f3f"
+set inputbar-fg "#dcdccc"
+set completion-bg "#3f3f3f"
+set completion-fg "#dcdccc"
+set completion-group-bg "#4f4f4f"
+set completion-group-fg "#dcdccc"
+set recolor-darkcolor "#dcdccc"
+set recolor-lightcolor "#3f3f3f"
+set selection-clipboard clipboard

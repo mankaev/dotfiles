@@ -1,0 +1,26 @@
+#!/bin/bash
+TZ=UTC nice -n 19 /usr/bin/inox --disable \
+    --disable-translate \
+    --disable-infobars \
+    --disable-suggestions-service \
+    --disable-save-password-bubble \
+    --disable-quic \
+    --disable-notifications \
+    --disable-reading-from-canvas \
+    --disable-sync-preferences \
+    --process-per-site \
+    --disable-reading-from-canvas \
+    --start-maximized \
+    --enable-precache \
+    --enable-native-notifications \
+    --remote-debugging-port=9222 \
+    --no-first-run \
+    --hide-scrollbars \
+    --fast \
+    --fast-start \
+    --wm-window-animations-disabled \
+    --enable-native-gpu-memory-buffers \
+    --enable-webrtc-hw-h264-encoding \
+    --process-per-site \
+    # --disable-remote-fonts \
+    # --kiosk

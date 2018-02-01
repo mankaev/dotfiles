@@ -1,0 +1,14 @@
+[ui]
+username = Ilya Mankaev <mankaev@gmail.com>
+
+[email]
+from = Ilya Mankaev <mankaev@gmail.com>
+
+[extensions]
+color =
+convert =
+graphlog =
+
+[alias]
+lg = log -G
+

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Calibre
+Exec=ebook-viewer %F
+Type=Application
+Terminal=false
+Categories=System;
+MimeType=application/epub+zip;application/x-mobipocket-ebook;application/x-fictionbook+xml;
