@@ -1,0 +1,6 @@
+[Unit]
+Description=Backs up files
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/rsync %h/pictures %h/files %h/music --inplace -a -P -C --delete router:/mnt/data/backup

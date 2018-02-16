@@ -53,6 +53,9 @@
           ,(format "openssl s_client -connect %%h:%%p -CAfile %s -no_ssl2 -no_ssl3 -ign_eof" trustfile)))
   (setq gnutls-trustfiles (list trustfile)))
 
+;; This makes long-line buffers usable
+(setq-default bidi-display-reordering nil)
+
 ;; Disable tabs, but given them proper width
 (setq-default indent-tabs-mode nil
               tab-width 2)
@@ -347,28 +350,64 @@
   (evil-set-initial-state 'Info-mode 'motion)
   (evil-set-initial-state 'help-mode 'motion))
 
-;; (use-package exwm
-;;   :config
-;;   (setq exwm-workspace-number 9)
-;;   (setq exwm-workspace-minibuffer-position 'bottom)
-;;   ;; (add-hook 'exwm-floating-setup-hook #'exwm-layout-hide-mode-line)
-;;   ;; (add-hook 'exwm-floating-exit-hook #'exwm-layout-show-mode-line)
-;;   ;; + Bind "s-0" to "s-9" to switch to the corresponding workspace.
-;;   (dotimes (i 10)
-;;     (exwm-input-set-key (kbd (format "s-%d" i))
-;;                         `(lambda ()
-;;                            (interactive)
-;;                            (exwm-workspace-switch-create ,i))))
-;;   (exwm-input-set-key (kbd "s-l")
-;;                       (lambda () (interactive) (start-process "" nil "slock")))
-;;   (exwm-input-set-key (kbd "s-p")
-;;                       (lambda (command)
-;;                         (interactive (list (read-shell-command "$ ")))
-;;                         (start-process-shell-command command nil command)))
-;;   (require 'exwm)
-;;   (exwm-enable)
-;;   (require 'exwm-cm)
-;;   (exwm-cm-enable))
+(use-package erc
+  :defer t
+  :config
+  (use-package erc-image)
+  (erc-track-mode t)
+  (erc-notify-mode t)
+  (erc-completion-mode t)
+  (erc-fill-mode t)
+  (erc-match-mode t)
+  (erc-netsplit-mode t)
+  (erc-services-mode t)
+  (erc-timestamp-mode t)
+  (erc-spelling-mode t)
+  (erc-image-mode t)
+  (erc-dcc-mode t)
+  (setq erc-track-exclude-types '("JOIN" "KICK" "PART" "QUIT" "MODE"
+                                  "324" "329" "332" "333" "353" "447")
+        erc-modules '(autojoin button completion fill irccontrols list
+                               log match menu move-to-prompt netsplit networks
+                               noncommands notifications readonly ring stamp
+                               track)
+        erc-hide-list '("JOIN" "PART" "QUIT")
+        erc-nick "mankaev"
+        erc-user-full-name "Ilia Mankaev"
+        erc-server "127.0.0.1"
+        erc-port "6667"
+        erc-server-coding-system '(utf-8 . utf-8)
+        erc-insert-timestamp-function 'erc-insert-timestamp-left
+        erc-insert-away-timestamp-function 'erc-insert-timestamp-left
+        erc-log-channels-directory "~/.emacs.d/erc"
+        erc-query-display 'buffer
+        erc-prompt-for-nickserv-password nil ; Do not ask for password
+        erc-save-buffer-on-part nil
+        erc-save-queries-on-quit nil
+        erc-log-write-after-send t
+        erc-log-write-after-insert t
+        erc-interpret-mirc-color t ; Interpret mIRC-style color commands in IRC chats
+        erc-kill-buffer-on-part t  ; Kill buffers for channels after /part
+        erc-kill-queries-on-quit t ; Kill buffers for private queries after quitting the server
+        ;; Kill buffers for server messages after quitting the server
+        erc-kill-server-buffer-on-quit t)
+  (erc-update-modules)
+  (defun erc-global-notify (match-type nick message)
+    "Notify when someone sends a message that matches a regexp in `erc-keywords'."
+    (when (and (eq match-type 'keyword)
+               ;; I don't want to see anything from the erc server
+               (null (string-match "^[sS]erver" nick))
+               ;; or bots
+               (null (string-match "\\(bot\\|serv\\)!" nick)))
+      (notifications-notify
+       :title nick
+       :body message
+       :urgency 'normal)))
+
+  (add-hook 'erc-text-matched-hook 'erc-global-notify)
+  (add-hook 'erc-mode-hook (lambda ()
+                             (setq-local company-backends '((company-capf)))
+                             (company-mode))))
 
 (use-package page-break-lines           ; Better looking break lines
   :defer t
@@ -391,11 +430,11 @@
   :hook ((clojure-mode emacs-lisp-mode common-lisp-mode scheme-mode lisp-mode) . parinfer-mode)
   :config
   (setq parinfer-extensions
-        '(defaults       ; should be included.
-           ;; pretty-parens  ; different paren styles for different modes.
-           evil           ; If you use Evil.
-           smart-tab      ; C-b & C-f jump positions and smart shift with tab & S-tab.
-           smart-yank))   ; Yank behavior depend on mode.
+        '(defaults                      ; should be included.
+           ;; pretty-parens                ; different paren styles for different modes.
+           evil                         ; If you use Evil.
+           smart-tab                    ; C-b & C-f jump positions and smart shift with tab & S-tab.
+           smart-yank))                 ; Yank behavior depend on mode.
   :diminish parinfer-mode)
 
 (use-package smartparens                ; Parenthesis editing and balancing
@@ -505,15 +544,9 @@
         uniquify-ignore-buffers-re "^\\*"))
 
 (use-package eyebrowse                  ; Easy workspaces creation and switching
-  :bind (("M-s e" . eyebrowse-switch-to-window-config))
-  :bind (:map eyebrowse-mode-map
-              ("M-1" . eyebrowse-switch-to-window-config-1)
-              ("M-2" . eyebrowse-switch-to-window-config-2)
-              ("M-3" . eyebrowse-switch-to-window-config-3)
-              ("M-4" . eyebrowse-switch-to-window-config-4)
-              ("M-5" . eyebrowse-switch-to-window-config-5))
   :init (eyebrowse-mode)
   :config
+  (eyebrowse-setup-opinionated-keys)
   (setq eyebrowse-mode-line-separator " "
         eyebrowse-mode-line-style 'always
         eyebrowse-new-workspace t
@@ -609,9 +642,11 @@
 (use-package dired                      ; File manager
   :ensure nil
   :bind (:map dired-mode-map
+              ([return]   . dired-find-alternate-file)
               ([C-return] . open-in-external-app))
   :hook (dired-mode . turn-on-gnus-dired-mode)
   :config
+  (put 'dired-find-alternate-file 'disabled nil)
   (defun open-in-external-app ()
     "Open the file where point is or the marked files in external app.
 The app is chosen from your OS's preference."
@@ -632,9 +667,12 @@ The app is chosen from your OS's preference."
         ;; -F marks links with @
         dired-ls-F-marks-symlinks t))
 
-(use-package dired+
-  :config
-  (diredp-toggle-find-file-reuse-dir 1))
+(use-package dired-ranger
+  :ensure t
+  :bind (:map dired-mode-map
+              ("W" . dired-ranger-copy)
+              ("X" . dired-ranger-move)
+              ("Y" . dired-ranger-paste)))
 
 (use-package dired-imenu
   :defer t
@@ -706,6 +744,12 @@ The app is chosen from your OS's preference."
   (unbind-key "M-t" flyspell-mode-map)
   :diminish flyspell-mode)
 
+(use-package flyspell-correct-ivy
+  :ensure t
+  :after flyspell
+  :bind (:map flyspell-mode-map
+              ("M-$" . flyspell-correct-word-generic)))
+
 (use-package projectile                 ; Project management
   :config
   (setq projectile-enable-caching t
@@ -768,8 +812,6 @@ The app is chosen from your OS's preference."
 (use-package gitattributes-mode         ; Git attributes mode
   :defer t)
 
-(use-package nix-mode)                  ; Nix configuration files mode
-
 (use-package tramp                      ; Remote editing
   :defer t
   :config
@@ -787,8 +829,7 @@ The app is chosen from your OS's preference."
   (setq elfeed-feeds
         '("https://www.parabola.nu/feeds/news/"
           "https://puri.sm/feed/"
-          "https://www.idris-lang.org/feed/"
-          "http://lambda-the-ultimate.org/rss.xml"))
+          "https://www.idris-lang.org/feed/"))
   (evil-set-initial-state 'elfeed-show-mode 'insert)
   (evil-set-initial-state 'elfeed-search-mode 'insert))
 
@@ -1009,7 +1050,8 @@ The app is chosen from your OS's preference."
         cider-repl-display-help-banner nil
         cider-repl-history-display-duplicates nil
         cider-repl-use-pretty-printing t
-        cider-repl-pop-to-buffer-on-connect nil))
+        cider-repl-pop-to-buffer-on-connect nil)
+  (evil-set-initial-state 'cider-repl-mode 'insert))
 
 (use-package clj-refactor               ; Refactoring utilities
   :defer t

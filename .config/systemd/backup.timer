@@ -1,0 +1,10 @@
+[Unit]
+Description= Backup Timer
+
+[Timer]
+Unit=backup.service
+OnBootSec=120
+OnCalendar=hourly
+
+[Install]
+WantedBy=timers.target

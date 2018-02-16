@@ -12,7 +12,7 @@ floating_modifier $mod
 bindsym $mod+Return exec termite
 
 # move focused window
-bindsym $mod+l exec slock
+bindsym $mod+l exec i3lock -c 3F3F3F
 
 # kill focused window
 bindsym $mod+Shift+k kill
@@ -86,7 +86,7 @@ bindsym $mod+j focus left
 bindsym $mod+k focus right
 
 workspace 1 output eDP-1
-workspace 6 output HDMI-2
+workspace 9 output HDMI-2
 
 assign [class="Emacs"]     1
 assign [class="Termite"]   2

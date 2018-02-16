@@ -1,0 +1,3 @@
+#!/bin/sh
+i3-msg "[class=Emacs] focus"
+emacsclient -n --eval "(dired \"$@\")"
