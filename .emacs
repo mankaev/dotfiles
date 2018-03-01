@@ -277,7 +277,7 @@
              ((eq major-mode 'go-mode) (gofmt-before-save))
              ((eq major-mode 'typescript-mode) (tide-format-before-save))
              ((eq major-mode 'haskell-mode) (hindent-reformat-buffer))
-             ((eq major-mode 'rust-mode) (rust-format-buffer))
+             ((eq major-mode 'rust-mode) (rust-format-buffer)))
              ;; ((member 'cider-mode (--filter (and (boundp it) (symbol-value it)) minor-mode-list)) (cider-format-buffer))
              ;; ((eq major-mode 'nxml-mode) (format-buffer "xmllint --format -"))
              ;; ((eq major-mode 'js2-mode) (format-buffer "js-beautify -n -s 2 -"))
@@ -286,7 +286,7 @@
              ;; ((eq major-mode 'python-mode) (format-buffer "yapf --style='{based_on_style: chromium, indent_width: 2}'"))
              ;; ((eq major-mode 'perl-mode) (format-buffer "perltidy -i=2 -q -st"))
              ;; ((eq major-mode 'sql-mode) (format-buffer "sqlformat -"))
-             )
+
        (delete-trailing-whitespace))
 
 (add-hook 'before-save-hook #'my-before-save-hook)
@@ -371,7 +371,7 @@
                                log match menu move-to-prompt netsplit networks
                                noncommands notifications readonly ring stamp
                                track)
-        erc-hide-list '("JOIN" "PART" "QUIT")
+        erc-hide-list '("JOIN" "PART" "QUIT" "NICK")
         erc-nick "mankaev"
         erc-user-full-name "Ilia Mankaev"
         erc-server "127.0.0.1"
@@ -427,7 +427,12 @@
 
 (use-package parinfer
   :defer t
-  :hook ((clojure-mode emacs-lisp-mode common-lisp-mode scheme-mode lisp-mode) . parinfer-mode)
+  :hook ((clojure-mode
+          emacs-lisp-mode
+          common-lisp-mode
+          scheme-mode
+          lisp-mode
+          racket-mode) . parinfer-mode)
   :config
   (setq parinfer-extensions
         '(defaults                      ; should be included.
@@ -528,7 +533,6 @@
   :defer t
   :config
   (setq savehist-save-minibuffer-history t
-        savehist-save-minibuffer-history t
         savehist-additional-variables '(kill-ring search-ring regexp-search-ring)
         savehist-autosave-interval 180)
   (savehist-mode t))
@@ -622,8 +626,6 @@
 (use-package flycheck-clojure          ; Check clojure
   :defer t
   :after flycheck
-  :init
-  (add-to-list 'flycheck-disabled-checkers 'clojure-cider-typed)
   :config
   (flycheck-clojure-setup))
 
@@ -647,6 +649,7 @@
   :hook (dired-mode . turn-on-gnus-dired-mode)
   :config
   (put 'dired-find-alternate-file 'disabled nil)
+
   (defun open-in-external-app ()
     "Open the file where point is or the marked files in external app.
 The app is chosen from your OS's preference."
@@ -656,7 +659,9 @@ The app is chosen from your OS's preference."
       (mapc (lambda (file-path)
               (let ((process-connection-type nil))
                 (start-process "" nil "xdg-open" file-path))) file-list)))
-  (setq dired-auto-revert-buffer t      ; Revert buffers on revisiting
+  (setq dired-no-confirm
+        '(byte-compile chgrp chmod chown copy delete load move symlink))
+  (setq dired-auto-revert-buffer t            ; Revert buffers on revisiting
         dired-listing-switches
         "-lFaGh1v --group-directories-first"  ; Add ls switches
         global-auto-revert-non-file-buffers t ; Auto refresh Dired
@@ -678,12 +683,11 @@ The app is chosen from your OS's preference."
   :defer t
   :after dired)
 
-(use-package which-key
-  :defer t
+(use-package autorevert
   :config
-  (setq which-key-frame-max-height 40)
-  (which-key-mode)
-  :diminish which-key-mode)
+  ;; auto revert buffers when changed on disk
+  (global-auto-revert-mode 1)
+  :diminish auto-revert-mode)
 
 (use-package company                    ; Auto-completion
   :bind (:map company-active-map
@@ -776,11 +780,18 @@ The app is chosen from your OS's preference."
   (setq vc-follow-symlinks t))
 
 (use-package magit                      ; The best Git client out there
-  :defer t
+  :bind (:map magit-status-mode-map
+              ("q" . #'mu-magit-kill-buffers))
   :init
   ;; Refresh `diff-hl' accordingly
   (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
   :config
+  (defun mu-magit-kill-buffers ()
+    "Restore window configuration and kill all Magit buffers."
+    (interactive)
+    (let ((buffers (magit-mode-get-buffers)))
+      (magit-restore-window-configuration)
+      (mapc #'kill-buffer buffers)))
   (magit-auto-revert-mode)
   (setq magit-save-repository-buffers 'dontask
         magit-completing-read-function 'ivy-completing-read
@@ -941,6 +952,31 @@ The app is chosen from your OS's preference."
               (setq-local company-backends '((company-jedi)))
               (setq fill-column 79)))) ;; PEP 8 compliant filling rules, 79 chars maximum
 
+(use-package slime-company
+  :config
+  (setq slime-company-completion 'fuzzy)
+  (add-hook 'slime-lisp-mode-hook
+            (lambda ()
+              (setq-local company-backends '((company-slime)))))
+  (add-hook 'slime-mode-hook
+            (lambda ()
+              (setq-local company-backends '((company-slime))))))
+
+(use-package slime
+  :hook (lisp-mode . slime-mode)
+  :bind (:map slime-mode-map
+              ("M-s j"    . slime)
+              ([C-return] . slime-edit-definition))
+  :config
+  (setq slime-contribs '(slime-fancy
+                         slime-sbcl-exts
+                         slime-quicklisp
+                         slime-company)
+        slime-net-coding-system 'utf-8-unix
+        inferior-lisp-program "sbcl")
+  (slime-setup)
+  :diminish (slime-mode slime-autodoc-mode))
+
 (use-package elisp-mode                 ; Emacs Lisp editing
   :ensure nil
   :defer t
@@ -984,10 +1020,6 @@ The app is chosen from your OS's preference."
               ("M-s r" . cider-refresh)
               ([C-return] . (lambda () (interactive) (cider-find-var t))))
   :config
-  (add-hook 'cider-mode-hook
-            (lambda ()
-              (add-to-list 'flycheck-disabled-checkers 'clojure-cider-typed)))
-
   (evil-set-initial-state 'cider-popup-buffer-mode 'motion)
   (evil-set-initial-state 'cider-browse-ns-mode 'motion)
   (evil-set-initial-state 'cider--debug-mode 'emacs)
@@ -1024,6 +1056,7 @@ The app is chosen from your OS's preference."
     (ANY 2)
     (context 2))
   :config
+  (setq clojure-align-forms-automatically t)
   (add-hook 'clojure-mode-hook
             (lambda ()
               (setq-local company-backends '((company-capf))))))
@@ -1065,10 +1098,11 @@ The app is chosen from your OS's preference."
   :diminish clj-refactor-mode)
 
 (use-package geiser                    ; Geiser mode
-  :bind (:map geiser-mode-map
-              ([C-return] . geiser-edit-symbol-at-point))
-  :config
-  (setq geiser-default-implementation 'guile)
+  :init
+  (setq geiser-default-implementation 'chez
+        geiser-active-implementations '(chez guile)
+        geiser-repl-use-other-window nil
+        geiser-repl-history-filename "~/.emacs.d/geiser-history")
   :diminish (geiser-mode geiser-autodoc-mode))
 
 (use-package clojure-snippets           ; Yasnippets for Clojure
@@ -1275,12 +1309,17 @@ The app is chosen from your OS's preference."
 
 (use-package tide
   :defer t
+  :hook (typescript-mode . tide-mode)
+  :bind (:map tide-mode-map
+              ([C-return] . tide-jump-to-definition))
   :config
+  (setq tide-jump-to-definition-reuse-window t)
   (flycheck-add-mode 'typescript-tslint 'web-mode)
   (add-hook 'typescript-mode-hook
             (lambda ()
               (tide-setup)
-              (tide-hl-identifier-mode t))))
+              (tide-hl-identifier-mode t)))
+  :diminish tide-mode)
 
 (use-package autorevert
   :ensure nil
@@ -1295,7 +1334,12 @@ The app is chosen from your OS's preference."
   :diminish abbrev-mode)
 
 (use-package racket-mode                ; Racket language mode
-  :defer t)
+  :defer t
+  :hook (racket-repl-mode . company-mode)
+  :bind (:map racket-mode-map
+              ("M-s j" . racket-run))
+  :init
+  (add-to-list 'auto-mode-alist '("\\.rkt\\'" . racket-mode)))
 
 (use-package realgud                    ; Additional debug modes
   :defer t)
@@ -1385,6 +1429,8 @@ The app is chosen from your OS's preference."
         eshell-highlight-prompt nil
         eshell-banner-message ""
         eshell-save-history-on-exit t
+        eshell-hist-ignoredups t
+        eshell-history-size 1000
         eshell-prompt-function (lambda () "$ ")
         eshell-prompt-regexp "^$ "
         eshell-where-to-jump 'begin
@@ -1393,10 +1439,9 @@ The app is chosen from your OS's preference."
         eshell-scroll-to-bottom-on-input 'all
         eshell-error-if-no-glob t
         eshell-hist-ignoredups t
-        eshell-save-history-on-exit t)
-  (setq eshell-visual-commands '("vi" "screen" "top" "less" "more" "lynx"
-                                 "ncftp" "pine" "tin" "trn" "elm" "vim"
-                                 "nmtui" "alsamixer" "htop" "el" "elinks"))
+        eshell-destroy-buffer-when-process-dies t)
+  (setq eshell-visual-commands '("vi" "screen" "top" "less" "more" "vim"
+                                 "alsamixer" "htop"))
 
   (setq eshell-visual-subcommands '(("git" "lg" "st" "log" "diff" "show")))
   (add-hook 'eshell-mode-hook
@@ -1429,6 +1474,13 @@ The app is chosen from your OS's preference."
       (eshell-send-input)))
   (evil-set-initial-state 'eshell-mode 'emacs))
 
+(use-package mingus
+  :defer t
+  :init
+  (setq mingus-mpd-config-file "~/.config/mpd/mpd.conf")
+  :config
+  (evil-set-initial-state 'mingus-playlist-mode 'emacs))
+
 (use-package undo-tree
   :defer t
   :config
@@ -1451,7 +1503,8 @@ The app is chosen from your OS's preference."
          ("C-x C-r" . counsel-recentf)
          ("M-s b"   . counsel-bookmark)
          ("M-y"     . counsel-yank-pop)
-         ("M-x"     . counsel-M-x))
+         ("M-x"     . counsel-M-x)
+         ("M-s k"   . bury-buffer))
   :config (counsel-mode)
   :diminish counsel-mode)
 
@@ -1476,7 +1529,7 @@ The app is chosen from your OS's preference."
         ivy-count-format ""          ; no regexp by default
         ivy-initial-inputs-alist nil ; configure regexp engine.
         ivy-re-builders-alist
-        '((t   . ivy--regex-plus)))  ; allow input not in order
+        '((t . ivy--regex-plus)))    ; allow input not in order
   (ivy-mode)
   :diminish ivy-mode)
 
@@ -1577,12 +1630,12 @@ The app is chosen from your OS's preference."
                            (when msg
                              (mu4e-message-contact-field-matches msg
                                                                  :to "mankaev@gmail.com")))
-             :vars '( ( user-mail-address            . "mankaev@gmail.com" )
-                      ( user-full-name               . "Ilya Mankaev" )
-                      ( mu4e-compose-signature       . "Ilya Mankaev\n" )
+             :vars '( ( user-mail-address            . "mankaev@gmail.com")
+                      ( user-full-name               . "Ilya Mankaev")
+                      ( mu4e-compose-signature       . "Ilya Mankaev\n")
                       ( system-name                  . "mankaev")
                       ( mu4e-sent-messages-behavior  . delete)
-                      ( epg-user-id                  . "C71CD9843FE0986C61CC26722CBACD9B90C9D091" )
+                      ( epg-user-id                  . "C71CD9843FE0986C61CC26722CBACD9B90C9D091")
                       ( smtpmail-stream-type         . starttls)
                       ( smtpmail-default-smtp-server . "smtp.gmail.com")
                       ( smtpmail-smtp-server         . "smtp.gmail.com")
@@ -1595,15 +1648,15 @@ The app is chosen from your OS's preference."
                            (when msg
                              (mu4e-message-contact-field-matches msg
                                                                  :to "i@totravel.online")))
-             :vars '( ( user-mail-address            . "i@totravel.online" )
-                      ( user-full-name               . "Ilia Mankaev" )
-                      ( mu4e-compose-signature       . "Ilia Mankaev\nAlliance Online CTO" )
+             :vars '( ( user-mail-address            . "i@totravel.online")
+                      ( user-full-name               . "Ilia Mankaev")
+                      ( mu4e-compose-signature       . "Ilia Mankaev\nAlliance Online CTO")
                       ( system-name                  . "totravel.online")
                       ( mu4e-sent-messages-behavior  . sent)
-                      ( epg-user-id                  . "6589D1B2C5A8A48A78758C763BBB1BA19FB0378D" )
+                      ( epg-user-id                  . "6589D1B2C5A8A48A78758C763BBB1BA19FB0378D")
                       ( smtpmail-stream-type         . starttls)
-                      ( smtpmail-default-smtp-server . "smtp.yandex.com" )
-                      ( smtpmail-smtp-server         . "smtp.yandex.com" )
+                      ( smtpmail-default-smtp-server . "smtp.yandex.com")
+                      ( smtpmail-smtp-server         . "smtp.yandex.com")
                       ( smtpmail-smtp-service        . 587)))))
 
   (setq mu4e-headers-fields '((:human-date . 8)

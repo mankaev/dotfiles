@@ -3,6 +3,7 @@ export PATH=/usr/lib/ccache/bin:$HOME/.local/bin:$HOME/bin:/usr/bin/core_perl:/u
 export GTAGSFORCECPP=true
 
 export MOZ_USE_OMTC=1
+export MOZ_USE_OMTP=1
 export MOZ_USE_XINPUT2=1
 export MOZ_WEBRENDER=1
 export MOZ_SERVICES_METRICS=0
@@ -27,9 +28,8 @@ export QEMU_ALSA_DAC_PERIOD_SIZE=170
 # export ECORE_EVAS_ENGINE=wayland_egl
 # export ELM_ENGINE=wayland_egl
 # export XDG_SESSION_TYPE=wayland
-# export XKB_DEFAULT_LAYOUT=us,ru
-# export XKB_DEFAULT_VARIANT=,nodeadkeys
-# export XKB_DEFAULT_OPTIONS=grp:shifts_toggle,
+export XKB_DEFAULT_LAYOUT=us,ru
+export XKB_DEFAULT_OPTIONS=grp:shifts_toggle,
 
 export XDG_RUNTIME_DIR=/run/user/1000
 
@@ -39,8 +39,6 @@ setxkbmap -layout "us,ru" -option "" && setxkbmap -option grp:shifts_toggle
 display -window root xc:'#2B2B2B'
 
 termite &
-psi-plus &
-$HOME/bin/chromium &
-#emacscient -c &
-$HOME/tmp/Telegram/Telegram &
-i3
+iceweasel &
+telegram-desktop &
+exec dbus-launch --exit-with-session i3
