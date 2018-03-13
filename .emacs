@@ -3,8 +3,6 @@
 ;;; Plain and dirty Emacs >= v25 configuration file
 ;;; Code:
 
-(setq debug-on-error t)
-
 ;; Turn off mouse interface early in startup to avoid momentary display
 (when (fboundp 'menu-bar-mode) (menu-bar-mode -1))
 (when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
@@ -75,9 +73,11 @@
 
 ;; Bootstrap `use-package' and `dash'
 (unless (and (package-installed-p 'use-package)
+             (package-installed-p 'diminish)
              (package-installed-p 'dash))
   (package-refresh-contents)
   (package-install 'use-package)
+  (package-install 'diminish)
   (package-install 'dash))
 
 (eval-when-compile
@@ -624,10 +624,10 @@
   :diminish flycheck-mode)
 
 (use-package flycheck-clojure          ; Check clojure
-  :defer t
-  :after flycheck
-  :config
-  (flycheck-clojure-setup))
+ :defer t
+ :after flycheck
+ :config
+ (flycheck-clojure-setup))
 
 (use-package recentf                    ; Manage recent files
   :defer t
@@ -673,7 +673,6 @@ The app is chosen from your OS's preference."
         dired-ls-F-marks-symlinks t))
 
 (use-package dired-ranger
-  :ensure t
   :bind (:map dired-mode-map
               ("W" . dired-ranger-copy)
               ("X" . dired-ranger-move)
@@ -736,7 +735,7 @@ The app is chosen from your OS's preference."
   (ispell-hunspell-add-multi-dic "en_GB,ru_RU"))
 
 (use-package flyspell                   ; Spell checking on-the-fly
-  :hook ((text-mode LaTeX-mode) . flyspell-mode)
+  :hook (text-mode . flyspell-mode)
   :hook (prog-mode . flyspell-prog-mode)
   :config
   (setq flyspell-use-meta-tab nil
@@ -749,7 +748,6 @@ The app is chosen from your OS's preference."
   :diminish flyspell-mode)
 
 (use-package flyspell-correct-ivy
-  :ensure t
   :after flyspell
   :bind (:map flyspell-mode-map
               ("M-$" . flyspell-correct-word-generic)))
@@ -792,7 +790,7 @@ The app is chosen from your OS's preference."
     (let ((buffers (magit-mode-get-buffers)))
       (magit-restore-window-configuration)
       (mapc #'kill-buffer buffers)))
-  (magit-auto-revert-mode)
+  ;; (magit-auto-revert-mode)
   (setq magit-save-repository-buffers 'dontask
         magit-completing-read-function 'ivy-completing-read
         magit-refs-show-commit-count 'all
@@ -899,16 +897,6 @@ The app is chosen from your OS's preference."
            "* TODO %^{Task}  %^G\n   %?")))
   (evil-set-initial-state 'org-capture-mode 'emacs))
 
-(use-package ox-latex
-  :defer t
-  :ensure org-plus-contrib
-  :config
-  (add-to-list 'org-latex-packages-alist '("" "minted"))
-  (setq org-latex-listings 'minted)
-  ;; Use XeLaTex for PDF exsetq org-latex-to-pdf-process
-  (setq org-latex-pdf-process
-        '("xelatex -shell-escape %f"))) ;; for multiple passes
-
 (use-package ox-html
   :defer t
   :ensure org-plus-contrib
@@ -1013,7 +1001,6 @@ The app is chosen from your OS's preference."
 
 (use-package cider-mode                 ; CIDER mode for REPL interaction
   :ensure cider
-  :hook (cider-mode . flycheck-clojure-setup)
   :hook (cider-mode . cider-company-enable-fuzzy-completion)
   :hook cider-repl-mode
   :bind (:map cider-mode-map
@@ -1321,10 +1308,6 @@ The app is chosen from your OS's preference."
               (tide-hl-identifier-mode t)))
   :diminish tide-mode)
 
-(use-package autorevert
-  :ensure nil
-  :diminish auto-revert-mode)
-
 (use-package abbrev
   :ensure nil
   :defer t
@@ -1440,8 +1423,7 @@ The app is chosen from your OS's preference."
         eshell-error-if-no-glob t
         eshell-hist-ignoredups t
         eshell-destroy-buffer-when-process-dies t)
-  (setq eshell-visual-commands '("vi" "screen" "top" "less" "more" "vim"
-                                 "alsamixer" "htop"))
+  (setq eshell-visual-commands '("top" "less" "more" "htop" "mc"))
 
   (setq eshell-visual-subcommands '(("git" "lg" "st" "log" "diff" "show")))
   (add-hook 'eshell-mode-hook
@@ -1492,8 +1474,8 @@ The app is chosen from your OS's preference."
 (use-package counsel-gtags
   :defer t
   :config
-  (counsel-gtags-mode)
   (setq counsel-gtags-auto-update t)
+  (counsel-gtags-mode)
   :diminish counsel-gtags-mode)
 
 (use-package counsel
@@ -1505,7 +1487,13 @@ The app is chosen from your OS's preference."
          ("M-y"     . counsel-yank-pop)
          ("M-x"     . counsel-M-x)
          ("M-s k"   . bury-buffer))
-  :config (counsel-mode)
+  :config
+  (defadvice find-file (after find-file-sudo activate)
+    "Find file as root if necessary."
+    (unless (and buffer-file-name
+                 (file-writable-p buffer-file-name))
+      (find-alternate-file (concat "/sudo:root@localhost:" buffer-file-name))))
+  (counsel-mode)
   :diminish counsel-mode)
 
 (use-package woman
@@ -1533,8 +1521,19 @@ The app is chosen from your OS's preference."
   (ivy-mode)
   :diminish ivy-mode)
 
-(use-package info+
-  :defer t)
+(use-package transmission
+  :defer t
+  :config
+  (setq transmission-host "192.168.1.1"
+        transmission-refresh-modes '(transmission-mode
+                                     transmission-files-mode
+                                     transmission-info-mode
+                                     transmission-peers-mode)
+        transmission-refresh-interval 15)
+  (evil-set-initial-state 'transmission-mode 'emacs)
+  (evil-set-initial-state 'transmission-files-mode 'emacs)
+  (evil-set-initial-state 'transmission-info-mode 'emacs)
+  (evil-set-initial-state 'transmission-peers-mode 'emacs))
 
 (use-package eww
   :ensure nil
