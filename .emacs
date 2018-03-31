@@ -1,6 +1,8 @@
-;;; package --- Summary
+;;; .emacs --- Emacs configuration file
+;; Package-requires: ((emacs "25.1"))
+
 ;;; Commentary:
-;;; Plain and dirty Emacs >= v25 configuration file
+
 ;;; Code:
 
 ;; Turn off mouse interface early in startup to avoid momentary display
@@ -138,10 +140,8 @@
 (add-to-list 'default-frame-alist '(font . "Pragmata Pro-18"))
 (add-to-list 'default-frame-alist '(cursor-color . "red"))
 
-;; Set the directory where all backup and autosave files will be saved
-(setq backup-directory-alist '((".*" . "~/.emacs.d/backup"))
-      version-control        t          ; Version number for backup files
-      delete-old-versions    t)
+;; Prevent emacs from creating a backup file filename~
+(setq make-backup-files nil)
 
 (setq auto-save-list-file-prefix     "~/.emacs.d/autosave/"
       auto-save-file-name-transforms '((".*" "~/.emacs.d/autosave/" t)))
@@ -227,37 +227,6 @@
       '(:eval (if (buffer-file-name)
                   (abbreviate-file-name (buffer-file-name)) "%b")))
 
-;; Configure `display-buffer' behaviour for some special buffers
-(setq display-buffer-alist
- `(
-   ;; Messages, errors, Calendar and REPLs in the bottom side window
-   (,(rx bos (or "*Help"             ; Help buffers
-                 "*Warnings*"        ; Emacs warnings
-                 "*Compile-Log*"     ; Emacs byte compiler log
-                 "*compilation"      ; Compilation buffers
-                 "*Flycheck errors*" ; Flycheck error list
-                 "*shell"            ; Shell window
-                 "*Calendar"         ; Calendar window
-                 "*cider-repl"       ; CIDER REPL
-                 "*ielm"             ; IELM REPL
-                 "*SQL"              ; SQL REPL
-                 "*idris-repl*"      ; Idris REPL
-                 ;; AUCTeX command output
-                 (and (1+ nonl) " output*")))
-    (display-buffer-reuse-window display-buffer-in-side-window)
-    (side . bottom)
-    (reusable-frames . visible)
-    (window-height . 0.35))
-   ("\\.pdf$*"
-    (display-buffer-reuse-window display-buffer-in-side-window)
-    (side . right)
-    (reusable-frames . visible)
-    (window-width . 0.5))
-   ;; Let `display-buffer' reuse visible frames for all buffers.  This must
-   ;; be the last entry in `display-buffer-alist', because it overrides any
-   ;; later entry with more specific actions.
-   ("." nil (reusable-frames . visible))))
-
 ;; Use `emacs-lisp-mode' instead of `lisp-interaction-mode' for scratch buffer
 (setq initial-major-mode 'emacs-lisp-mode)
 
@@ -275,9 +244,9 @@
 (defun my-before-save-hook () "Format save hook."
        (cond ((eq major-mode 'c++-mode) (clang-format-buffer))
              ((eq major-mode 'go-mode) (gofmt-before-save))
-             ((eq major-mode 'typescript-mode) (tide-format-before-save))
-             ((eq major-mode 'haskell-mode) (hindent-reformat-buffer))
-             ((eq major-mode 'rust-mode) (rust-format-buffer)))
+             ((eq major-mode 'typescript-mode) (tide-format-before-save)))
+             ;; ((eq major-mode 'haskell-mode) (hindent-reformat-buffer))
+             ;; ((eq major-mode 'rust-mode) (rust-format-buffer)))
              ;; ((member 'cider-mode (--filter (and (boundp it) (symbol-value it)) minor-mode-list)) (cider-format-buffer))
              ;; ((eq major-mode 'nxml-mode) (format-buffer "xmllint --format -"))
              ;; ((eq major-mode 'js2-mode) (format-buffer "js-beautify -n -s 2 -"))
@@ -311,8 +280,7 @@
   (set-face-attribute 'mode-line nil :box nil)
   (set-face-attribute 'mode-line-inactive nil :box nil)
   (require 'spaceline-config)
-  (spaceline-spacemacs-theme)
-  (spaceline-info-mode))
+  (spaceline-spacemacs-theme))
 
 (use-package desktop
   :ensure nil
@@ -353,7 +321,6 @@
 (use-package erc
   :defer t
   :config
-  (use-package erc-image)
   (erc-track-mode t)
   (erc-notify-mode t)
   (erc-completion-mode t)
@@ -363,7 +330,6 @@
   (erc-services-mode t)
   (erc-timestamp-mode t)
   (erc-spelling-mode t)
-  (erc-image-mode t)
   (erc-dcc-mode t)
   (setq erc-track-exclude-types '("JOIN" "KICK" "PART" "QUIT" "MODE"
                                   "324" "329" "332" "333" "353" "447")
@@ -463,12 +429,10 @@
   :ensure smartparens
   :after smartparens
   :bind (:map smartparens-mode-map
-              ("M-<delete>"   . sp-unwrap-sexp)
               ("M-r"          . sp-raise-sexp)
-              ("C-)"          . sp-forward-barf-sexp)
-              ("C-}"          . sp-forward-slurp-sexp)
-              ("C-("          . sp-backward-barf-sexp)
-              ("C-{"          . sp-backward-slurp-sexp)
+              ("M-<delete>"   . sp-unwrap-sexp)
+              ("C-)"          . sp-forward-sexp)
+              ("C-("          . sp-backward-sexp)
               ("C-M-k"        . sp-kill-sexp)
               ("C-M-<delete>" . sp-splice-sexp-killing-forward))
   :bind (:map smartparens-strict-mode-map
@@ -500,6 +464,7 @@
 (use-package diff-hl                    ; Show changes in fringe
   :defer t
   :config
+  (setq diff-hl-draw-borders nil)
   (diff-hl-flydiff-mode)
   ;; Highlight changes to the current file in the fringe
   (global-diff-hl-mode))
@@ -596,7 +561,7 @@
 
 (use-package aggressive-fill-paragraph  ; Automatically fill paragrah
   :defer t
-  :hook ((org-mode TeX-mode) . aggressive-fill-paragraph-mode))
+  :hook (org-mode . aggressive-fill-paragraph-mode))
 
 (use-package saveplace                  ; Save point position in files
   :config (save-place-mode t))
@@ -620,14 +585,13 @@
         flycheck-display-errors-function
         #'flycheck-display-error-messages-unless-error-list)
 
-  (global-flycheck-mode)
   :diminish flycheck-mode)
 
 (use-package flycheck-clojure          ; Check clojure
- :defer t
- :after flycheck
- :config
- (flycheck-clojure-setup))
+  :defer t
+  :after flycheck
+  :config
+  (flycheck-clojure-setup))
 
 (use-package recentf                    ; Manage recent files
   :defer t
@@ -778,19 +742,18 @@ The app is chosen from your OS's preference."
   (setq vc-follow-symlinks t))
 
 (use-package magit                      ; The best Git client out there
+  :defer 3
   :bind (:map magit-status-mode-map
               ("q" . #'mu-magit-kill-buffers))
-  :init
+  :config
   ;; Refresh `diff-hl' accordingly
   (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
-  :config
   (defun mu-magit-kill-buffers ()
     "Restore window configuration and kill all Magit buffers."
     (interactive)
     (let ((buffers (magit-mode-get-buffers)))
       (magit-restore-window-configuration)
       (mapc #'kill-buffer buffers)))
-  ;; (magit-auto-revert-mode)
   (setq magit-save-repository-buffers 'dontask
         magit-completing-read-function 'ivy-completing-read
         magit-refs-show-commit-count 'all
@@ -801,7 +764,8 @@ The app is chosen from your OS's preference."
   (setq magit-display-buffer-function
         #'magit-display-buffer-fullframe-status-v1)
 
-  (use-package evil-magit)
+  (use-package evil-magit
+    :defer t)
   :diminish (magit-wip-after-save-local-mode
              magit-wip-before-change-mode))
 
@@ -824,9 +788,7 @@ The app is chosen from your OS's preference."
 (use-package tramp                      ; Remote editing
   :defer t
   :config
-  (setq tramp-default-method "ssh"
-        ;; tramp-shell-prompt-pattern "^[^$>\n]*[#$%>] *\\(\[[0-9;]*[a-zA-Z] *\\)*"
-        auto-save-file-name-transforms nil)
+  (setq auto-save-file-name-transforms nil)
 
   (add-to-list 'backup-directory-alist
                (cons tramp-file-name-regexp nil)))
@@ -967,7 +929,8 @@ The app is chosen from your OS's preference."
 
 (use-package elisp-mode                 ; Emacs Lisp editing
   :ensure nil
-  :defer t
+  :bind (:map emacs-lisp-mode-map
+              ([C-return] . elisp-def))
   :interpreter ("emacs" . emacs-lisp-mode)
   :config
   (defconst use-package-imenu-expression
@@ -987,6 +950,10 @@ The app is chosen from your OS's preference."
               (add-use-package-to-imenu)
               (setq-local company-backends '((company-capf))))))
 
+(use-package elisp-def
+  :defer t
+  :hook ((emacs-lisp-mode ielm-mode) . elisp-def-mode))
+
 (use-package cider                      ; Clojure development environment
   :defer t
   :config
@@ -997,7 +964,28 @@ The app is chosen from your OS's preference."
    ;; Set up Figwheel in ClojureScript REPL
    cider-cljs-lein-repl "(do (use 'figwheel-sidecar.repl-api) (start-figwheel!) (cljs-repl))"
    ;; Do not offer to open ClojureScript app in browser
-   cider-offer-to-open-cljs-app-in-browser nil))
+   cider-offer-to-open-cljs-app-in-browser nil)
+  (add-hook 'cider-connected-hook
+            '(lambda ()
+               (cider-repl-clear-banners)))
+
+  (defvar cider-jack-in-start-time nil)
+
+  (defun start-timing-cider-jack-in (&rest args)
+    (setq cider-jack-in-start-time (current-time)))
+
+  (defun elapsed-time-cider-jack-in (&rest args)
+    (when cider-jack-in-start-time
+      (prog1 (format "%.3f seconds"
+                     (float-time
+                      (time-since cider-jack-in-start-time)))
+        (setq cider-jack-in-start-time nil))))
+
+  (add-function :before
+                (symbol-function 'cider-jack-in)
+                #'start-timing-cider-jack-in)
+  (setq cider-connection-message-fn
+        #'elapsed-time-cider-jack-in))
 
 (use-package cider-mode                 ; CIDER mode for REPL interaction
   :ensure cider
@@ -1070,7 +1058,8 @@ The app is chosen from your OS's preference."
         cider-repl-display-help-banner nil
         cider-repl-history-display-duplicates nil
         cider-repl-use-pretty-printing t
-        cider-repl-pop-to-buffer-on-connect nil)
+        cider-repl-pop-to-buffer-on-connect nil
+        cider-repl-display-in-current-window t)
   (evil-set-initial-state 'cider-repl-mode 'insert))
 
 (use-package clj-refactor               ; Refactoring utilities
@@ -1106,7 +1095,8 @@ The app is chosen from your OS's preference."
 
   :config
   (yas-reload-all)
-  (use-package yasnippet-snippets)
+  (use-package yasnippet-snippets
+    :defer t)
   :diminish yas-minor-mode)
 
 ;;; Idris
@@ -1439,9 +1429,7 @@ The app is chosen from your OS's preference."
 
   (defun eshell/magit ()
     "Function to open magit-status for the current directory"
-    (interactive)
-    (magit-status)
-    nil)
+    (magit-status-internal "."))
 
   (defun eshell-here ()
     "Go to eshell and set current directory to the buffer's directory"
@@ -1455,13 +1443,6 @@ The app is chosen from your OS's preference."
       (eshell-kill-input)
       (eshell-send-input)))
   (evil-set-initial-state 'eshell-mode 'emacs))
-
-(use-package mingus
-  :defer t
-  :init
-  (setq mingus-mpd-config-file "~/.config/mpd/mpd.conf")
-  :config
-  (evil-set-initial-state 'mingus-playlist-mode 'emacs))
 
 (use-package undo-tree
   :defer t
@@ -1488,11 +1469,12 @@ The app is chosen from your OS's preference."
          ("M-x"     . counsel-M-x)
          ("M-s k"   . bury-buffer))
   :config
-  (defadvice find-file (after find-file-sudo activate)
-    "Find file as root if necessary."
-    (unless (and buffer-file-name
-                 (file-writable-p buffer-file-name))
-      (find-alternate-file (concat "/sudo:root@localhost:" buffer-file-name))))
+  (setq counsel-git-cmd "rg --files"
+        counsel-rg-base-command "rg -i -M 120 --no-heading --line-number --color never %s .")
+  (defun my/find-file-hook ()
+    (when (not (file-writable-p buffer-file-name))
+      (find-alternate-file (concat "/sudo::" buffer-file-name))))
+  (add-hook 'find-file-hook 'my/find-file-hook)
   (counsel-mode)
   :diminish counsel-mode)
 
@@ -1501,7 +1483,8 @@ The app is chosen from your OS's preference."
   :bind (("M-s m"   . woman)))
 
 (use-package counsel-projectile
-  :bind (("M-s a"   . counsel-projectile-rg)))
+  :bind (:map projectile-mode-map
+              ("M-s a"   . counsel-projectile-rg)))
 
 (use-package swiper
   :bind (("M-s s"   . swiper)))
@@ -1512,11 +1495,11 @@ The app is chosen from your OS's preference."
               ([tab] . ivy-alt-done))
   :config
   (setq ivy-use-virtual-buffers t    ; add ‘recentf-mode’ and bookmarks to ‘ivy-switch-buffer’.
-        ivy-wrap t                   ; number of result lines to display
-        ivy-height 17                ; does not count candidates
-        ivy-count-format ""          ; no regexp by default
-        ivy-initial-inputs-alist nil ; configure regexp engine.
-        ivy-re-builders-alist
+        ivy-wrap t
+        ivy-height 17                ; number of result lines to display
+        ivy-count-format ""          ; does not count candidates
+        ivy-initial-inputs-alist nil ; no regexp by default
+        ivy-re-builders-alist        ; configure regexp engine.
         '((t . ivy--regex-plus)))    ; allow input not in order
   (ivy-mode)
   :diminish ivy-mode)
@@ -1562,43 +1545,9 @@ The app is chosen from your OS's preference."
   (evil-set-initial-state 'calendar-mode 'emacs)
   (add-hook 'calendar-today-visible-hook 'calendar-mark-today))
 
-(use-package gnus
-  :ensure nil
-  :config
-  (require 'smtpmail-async)
-  (setq mail-user-agent 'mu4e-user-agent
-        read-mail-command    'mu4e
-        gnus-dired-mail-mode 'mu4e-user-agent)
-  (setq message-send-mail-function 'async-smtpmail-send-it
-        message-required-mail-headers '(From Subject Date (optional . In-Reply-To))
-        mail-specify-envelope-from t  ; Use from field to specify sender name.
-        message-kill-buffer-on-exit t
-        message-citation-line-format "On %a %d %b %Y at %R UTC, %f wrote:\n"
-        message-citation-line-function 'message-insert-formatted-citation-line
-        message-cite-reply-position 'above
-        mail-envelope-from 'header)   ; otherwise `user-mail-address' is used.
-  (setq mml2015-use 'epg
-        mml-secure-openpgp-encrypt-to-self t
-        mml-secure-openpgp-always-trust nil
-        mml-secure-cache-passphrase t
-        mml-secure-passphrase-cache-expiry '36000
-        mml-secure-openpgp-sign-with-sender t
-        mm-verify-option 'always
-        mm-decrypt-option 'always)
-
-  ;; Use Org structures and tables in message mode
-  (add-hook 'message-mode-hook
-            (lambda ()
-              (turn-on-orgtbl)
-              (turn-on-orgstruct++)))
-  (add-hook 'message-send-hook
-            (lambda ()
-              ;; (mml-secure-message-sign-encrypt)
-              (mml-secure-message-sign)))
-  :diminish (orgtbl-mode orgstruct-mode mml-mode))
-
 (use-package mu4e
   :ensure nil
+  :defer 3
   :config
   (setq mu4e-maildir "~/mail"
         mu4e-attachment-dir "~/tmp"
@@ -1670,6 +1619,37 @@ The app is chosen from your OS's preference."
                            :signature
                            :attachments))
 
+  (require 'smtpmail-async)
+  (setq mail-user-agent 'mu4e-user-agent
+        read-mail-command    'mu4e
+        gnus-dired-mail-mode 'mu4e-user-agent)
+  (setq message-send-mail-function 'async-smtpmail-send-it
+        message-required-mail-headers '(From Subject Date (optional . In-Reply-To))
+        mail-specify-envelope-from t  ; Use from field to specify sender name.
+        message-kill-buffer-on-exit t
+        message-citation-line-format "On %a %d %b %Y at %R UTC, %f wrote:\n"
+        message-citation-line-function 'message-insert-formatted-citation-line
+        message-cite-reply-position 'above
+        mail-envelope-from 'header)   ; otherwise `user-mail-address' is used.
+  (setq mml2015-use 'epg
+        mml-secure-openpgp-encrypt-to-self t
+        mml-secure-openpgp-always-trust nil
+        mml-secure-cache-passphrase t
+        mml-secure-passphrase-cache-expiry '36000
+        mml-secure-openpgp-sign-with-sender t
+        mm-verify-option 'always
+        mm-decrypt-option 'always)
+
+  ;; Use Org structures and tables in message mode
+  (add-hook 'message-mode-hook
+            (lambda ()
+              (turn-on-orgtbl)
+              (turn-on-orgstruct++)))
+  (add-hook 'message-send-hook
+            (lambda ()
+              ;; (mml-secure-message-sign-encrypt)
+              (mml-secure-message-sign)))
+
   (add-hook 'mu4e-compose-mode-hook
             (lambda ()
               (set-fill-column 65)
@@ -1684,7 +1664,7 @@ The app is chosen from your OS's preference."
                '("org-contact-add" . mu4e-action-add-org-contact) t)
   (add-to-list 'mu4e-view-actions
                '("org-contact-add" . mu4e-action-add-org-contact) t)
-  :diminish epa-mail-mode)
+  :diminish (epa-mail-mode orgtbl-mode orgstruct-mode mml-mode))
 
 (use-package mu4e-alert
   :defer t
@@ -1699,8 +1679,10 @@ The app is chosen from your OS's preference."
   :defer t
   :after mu4e)
 
-(use-package smart-comment
-  :bind ("M-;" . smart-comment))
+(use-package evil-nerd-commenter
+  :defer t
+  :init
+  (evilnc-default-hotkeys))
 
 (use-package google-translate
   :defer t
