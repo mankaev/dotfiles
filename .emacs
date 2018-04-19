@@ -67,11 +67,7 @@
 ;; Turn off annoying settings
 (blink-cursor-mode -1)
 (tooltip-mode -1)
-(global-hl-line-mode)
-
-;; The mode-line
-(line-number-mode)
-(column-number-mode)
+(line-number-mode -1)
 
 ;; Bootstrap `use-package' and `dash'
 (unless (and (package-installed-p 'use-package)
@@ -140,6 +136,8 @@
 (add-to-list 'default-frame-alist '(font . "Pragmata Pro-18"))
 (add-to-list 'default-frame-alist '(cursor-color . "red"))
 
+;; (modify-frame-parameters nil '((inhibit-double-buffering . t)))
+
 ;; Prevent emacs from creating a backup file filename~
 (setq make-backup-files nil)
 
@@ -198,21 +196,7 @@
 ;; Underline below the font bottomline instead of the baseline
 (setq x-underline-at-descent-line t)
 
-;; Don't let the cursor go into minibuffer prompt
-(let ((default (eval (car (get 'minibuffer-prompt-properties 'standard-value))))
-      (dont-touch-prompt-prop '(cursor-intangible t)))
-  (setq minibuffer-prompt-properties
-        (append default dont-touch-prompt-prop))
-  (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode))
-
-;; Allow to read from minibuffer while in minibuffer.
-(setq enable-recursive-minibuffers t)
-
-;; Show the minibuffer depth (when larger than 1)
-(minibuffer-depth-indicate-mode t)
-
-(setq use-dialog-box nil                ; Never use dialogs for minibuffer input
-      pop-up-frames nil)                ; No popup frames
+(setq pop-up-frames nil)                ; No popup frames
 
 (setq history-length 1000               ; Store more history
       history-delete-duplicates t)
@@ -300,23 +284,49 @@
   :bind (:map evil-normal-state-map
               ("SPC" . evil-ace-jump-char-mode)
               ("S-SPC" . evil-ace-jump-word-mode)
-              ("C-SPC" . evil-ace-jump-line-mode))
+              ("C-SPC" . evil-ace-jump-line-mode)
+              ([escape] . keyboard-quit))
   :bind (:map evil-operator-state-map
               ("SPC" . evil-ace-jump-char-mode)
               ("S-SPC" . evil-ace-jump-word-mode)
-              ("C-SPC" . evil-ace-jump-line-mode))
+              ("C-SPC" . evil-ace-jump-line-mode)
+              ([escape] . evil-normal-state))
   :bind (:map evil-window-map
               ("u" . winner-undo)
               ("d" . kill-buffer)
               ("D" . kill-buffer-and-window))
   :init
   (evil-mode)
+  (define-key evil-emacs-state-map [escape] #'evil-normal-state)
+  (define-key evil-visual-state-map [escape] #'keyboard-quit)
+  (define-key evil-motion-state-map [escape] #'evil-normal-state)
+
   (setq evil-default-cursor t           ; Do not overwrite cursor colour
         evil-cross-lines t
         evil-move-beyond-eol t
         evil-want-fine-undo t)
   (evil-set-initial-state 'Info-mode 'motion)
   (evil-set-initial-state 'help-mode 'motion))
+
+(use-package minibuffer
+  :ensure nil
+  :config
+  ;; Don't let the cursor go into minibuffer prompt
+  (let ((default (eval (car (get 'minibuffer-prompt-properties 'standard-value))))
+        (dont-touch-prompt-prop '(cursor-intangible t)))
+    (setq minibuffer-prompt-properties
+          (append default dont-touch-prompt-prop))
+    (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode))
+
+  (setq enable-recursive-minibuffers t     ; Allow to read from minibuffer while in minibuffer.
+        use-dialog-box nil)                ; Never use dialogs for minibuffer input
+  (minibuffer-depth-indicate-mode t)       ; Show the minibuffer depth (when larger than 1)
+
+  (define-key minibuffer-local-map [escape] #'minibuffer-keyboard-quit)
+  (define-key minibuffer-local-ns-map [escape] #'minibuffer-keyboard-quit)
+  (define-key minibuffer-local-completion-map [escape] #'minibuffer-keyboard-quit)
+  (define-key minibuffer-local-must-match-map [escape] #'minibuffer-keyboard-quit)
+  (define-key minibuffer-local-isearch-map [escape] #'minibuffer-keyboard-quit))
 
 (use-package erc
   :defer t
@@ -386,6 +396,11 @@
   :hook (prog-mode . hs-minor-mode)
   :diminish hs-minor-mode)
 
+(use-package hl-line
+  :ensure nil
+  :defer t
+  :hook (prog-mode . hl-line-mode))
+
 (use-package ace-jump-mode
   :defer t
   :config
@@ -410,7 +425,10 @@
 
 (use-package smartparens                ; Parenthesis editing and balancing
   :defer t
-  :hook ((emacs-lisp-mode clojure-mode inferior-emacs-lisp-mode) . smartparens-strict-mode)
+  :hook ((emacs-lisp-mode
+          clojure-mode
+          cider-repl-mode
+          inferior-emacs-lisp-mode) . smartparens-strict-mode)
   :config
   (smartparens-global-mode)
   (show-smartparens-global-mode)
@@ -482,10 +500,6 @@
         highlight-symbol-on-navigation-p t)
   :diminish highlight-symbol-mode)
 
-(use-package rainbow-mode               ; Highlight colours
-  :hook (web-mode)
-  :diminish rainbow-mode)
-
 (use-package rainbow-delimiters         ; Highlight parens
   :defer t
   :hook (prog-mode . rainbow-delimiters-mode))
@@ -554,11 +568,6 @@
   (bind-key [remap transpose-words] nil subword-mode-map)
   :diminish subword-mode)
 
-(use-package adaptive-wrap              ; Better line wrap
-  :defer t
-  :hook (visual-line-mode . adaptive-wrap-prefix-mode)
-  :diminish visual-line-mode)
-
 (use-package aggressive-fill-paragraph  ; Automatically fill paragrah
   :defer t
   :hook (org-mode . aggressive-fill-paragraph-mode))
@@ -601,7 +610,7 @@
 
 (use-package markdown-mode              ; Edit markdown files
   :hook (markdown-mode . auto-fill-mode)
-  :mode ("\\.md\\'" . markdown-mode)
+  :mode "\\.md\\'"
   :config
   (setq markdown-fontify-code-blocks-natively t))
 
@@ -764,10 +773,13 @@ The app is chosen from your OS's preference."
   (setq magit-display-buffer-function
         #'magit-display-buffer-fullframe-status-v1)
 
-  (use-package evil-magit
-    :defer t)
   :diminish (magit-wip-after-save-local-mode
              magit-wip-before-change-mode))
+
+(use-package evil-magit
+  :after magit
+  :defer t
+  :config (evil-magit-init))
 
 (use-package git-commit                 ; Git commit message mode
   :defer t
@@ -775,6 +787,10 @@ The app is chosen from your OS's preference."
   (global-git-commit-mode)
   (remove-hook 'git-commit-finish-query-functions
                #'git-commit-check-style-conventions))
+
+
+(use-package git-timemachine            ; Git timemachine
+  :defer t)
 
 (use-package gitconfig-mode             ; Git configuration mode
   :defer t)
@@ -792,17 +808,6 @@ The app is chosen from your OS's preference."
 
   (add-to-list 'backup-directory-alist
                (cons tramp-file-name-regexp nil)))
-
-(use-package elfeed                     ; RSS feed reader
-  :defer t
-  :config
-  (elfeed-set-timeout 30)               ; Increase timeout
-  (setq elfeed-feeds
-        '("https://www.parabola.nu/feeds/news/"
-          "https://puri.sm/feed/"
-          "https://www.idris-lang.org/feed/"))
-  (evil-set-initial-state 'elfeed-show-mode 'insert)
-  (evil-set-initial-state 'elfeed-search-mode 'insert))
 
 (use-package org-contacts
   :defer t
@@ -893,6 +898,7 @@ The app is chosen from your OS's preference."
 (use-package python                     ; Python editing
   :bind (:map python-mode-map
               ([C-return] . jedi:goto-definition))
+  :hook (inferior-python-mode . company-mode)
   :config
   (jedi:setup)
   (add-hook 'ein:connect-mode-hook 'ein:jedi-setup)
@@ -959,12 +965,15 @@ The app is chosen from your OS's preference."
   :config
   (setq
    nrepl-prompt-to-kill-server-buffer-on-quit nil
-   cider-show-error-buffer nil
+   cider-stacktrace-default-filters '(clj java repl tooling dup)
    cider-pprint-fn 'fipp
    ;; Set up Figwheel in ClojureScript REPL
    cider-cljs-lein-repl "(do (use 'figwheel-sidecar.repl-api) (start-figwheel!) (cljs-repl))"
    ;; Do not offer to open ClojureScript app in browser
    cider-offer-to-open-cljs-app-in-browser nil)
+  (add-hook 'cider-stacktrace-mode-hook
+            '(lambda ()
+               (cider-stacktrace-cycle-cause 2 1)))
   (add-hook 'cider-connected-hook
             '(lambda ()
                (cider-repl-clear-banners)))
@@ -985,7 +994,8 @@ The app is chosen from your OS's preference."
                 (symbol-function 'cider-jack-in)
                 #'start-timing-cider-jack-in)
   (setq cider-connection-message-fn
-        #'elapsed-time-cider-jack-in))
+        #'elapsed-time-cider-jack-in)
+  (evil-set-initial-state 'cider-stacktrace-mode 'insert))
 
 (use-package cider-mode                 ; CIDER mode for REPL interaction
   :ensure cider
@@ -1000,20 +1010,8 @@ The app is chosen from your OS's preference."
   (evil-set-initial-state 'cider--debug-mode 'emacs)
   (evil-set-initial-state 'cider-docview-mode 'emacs)
   (evil-set-initial-state 'cider-stacktrace-mode 'emacs)
-
-  (require 'cider-client)
-
-  (defun cider-mode-line-info ()
-    (if-let ((current-connection (ignore-errors (cider-current-connection))))
-        (with-current-buffer current-connection
-          (concat
-           cider-repl-type
-           (format
-            ":%s" (or (cider--project-name nrepl-project-dir) "<no project>"))))
-      "-"))
-
-  ;; Simplify CIDER mode-line indicator
-  (setq cider-mode-line '(:eval (format " CIDER[%s]" (cider-mode-line-info)))))
+  (setq cider-show-eval-spinner nil)
+  :diminish cider-mode)
 
 (use-package clojure-mode               ; Major mode for Clojure files
   :bind (:map clojure-mode-map
@@ -1057,8 +1055,8 @@ The app is chosen from your OS's preference."
         cider-repl-history-file (locate-user-emacs-file "cider-repl-history")
         cider-repl-display-help-banner nil
         cider-repl-history-display-duplicates nil
-        cider-repl-use-pretty-printing t
         cider-repl-pop-to-buffer-on-connect nil
+        cider-repl-scroll-on-output nil
         cider-repl-display-in-current-window t)
   (evil-set-initial-state 'cider-repl-mode 'insert))
 
@@ -1074,7 +1072,7 @@ The app is chosen from your OS's preference."
   :diminish clj-refactor-mode)
 
 (use-package geiser                    ; Geiser mode
-  :init
+  :config
   (setq geiser-default-implementation 'chez
         geiser-active-implementations '(chez guile)
         geiser-repl-use-other-window nil
@@ -1088,16 +1086,15 @@ The app is chosen from your OS's preference."
 (use-package yasnippet                  ; Snippets
   :defer t
   :hook (prog-mode . yas-minor-mode)
-  :init
-  (setq yas-verbosity 1                 ; No need to be so verbose
-        ;; yas-snippet-dirs "~/.emacs.d/snippets"
-        yas-wrap-around-region t)
-
   :config
+  (setq yas-verbosity 1                 ; No need to be so verbose
+        yas-wrap-around-region t)
   (yas-reload-all)
-  (use-package yasnippet-snippets
-    :defer t)
   :diminish yas-minor-mode)
+
+(use-package yasnippet-snippets
+  :defer t
+  :after yasnippet)
 
 ;;; Idris
 (use-package idris-mode                 ; Idris language mode
@@ -1127,25 +1124,18 @@ The app is chosen from your OS's preference."
 ;;; Web development
 (use-package web-mode                   ; Major mode for editing web templates
   :defer t
-  :init
-  (add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.html\\.twig\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.ftl?\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.tsx\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.css\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.xml\\'" . web-mode))
+  :mode "\\.[sx]?html?\\'"
+  :mode "\\.css\\'"
+  :mode "\\.xml\\'"
   :config
   (set-face-background 'web-mode-current-element-highlight-face "grey40")
   (add-hook 'web-mode-hook
             '(lambda ()
-               (require 'company-web-html)
                (when (string-equal "tsx" (file-name-extension buffer-file-name))
                  (tide-setup))
                (when (string-equal "jsx" (file-name-extension buffer-file-name))
                  (tide-setup))
+               (require 'company-web-html)
                (setq-local company-backends '((company-web-html company-css)))))
 
   (setq web-mode-enable-auto-pairing t
@@ -1191,6 +1181,10 @@ The app is chosen from your OS's preference."
               ([C-return] . ac-php-find-symbol-at-point))
   :mode "\\.php\\'"
   :config
+  (use-package ac-php
+    :defer t)
+  (use-package company-php
+    :defer t)
   (add-hook 'php-mode-hook
             (lambda ()
               (require 'ac-php)
@@ -1243,7 +1237,7 @@ The app is chosen from your OS's preference."
 
 (use-package cmake-mode
   :defer t
-  :mode (("CMakeLists\\.txt\\'" . cmake-mode) ("\\.cmake\\'" . cmake-mode))
+  :mode ("CMakeLists\\.txt\\.cmake\\'")
   :config
   (add-hook 'cmake-mode-hook
             (lambda ()
@@ -1308,11 +1302,10 @@ The app is chosen from your OS's preference."
 
 (use-package racket-mode                ; Racket language mode
   :defer t
+  :mode "\\.rkt\\'"
   :hook (racket-repl-mode . company-mode)
   :bind (:map racket-mode-map
-              ("M-s j" . racket-run))
-  :init
-  (add-to-list 'auto-mode-alist '("\\.rkt\\'" . racket-mode)))
+              ("M-s j" . racket-run)))
 
 (use-package realgud                    ; Additional debug modes
   :defer t)
@@ -1413,13 +1406,9 @@ The app is chosen from your OS's preference."
         eshell-error-if-no-glob t
         eshell-hist-ignoredups t
         eshell-destroy-buffer-when-process-dies t)
-  (setq eshell-visual-commands '("top" "less" "more" "htop" "mc"))
+  (setq eshell-visual-commands '("top" "less" "more" "htop" "mc" "ncmpcpp"))
 
   (setq eshell-visual-subcommands '(("git" "lg" "st" "log" "diff" "show")))
-  (add-hook 'eshell-mode-hook
-            (lambda ()
-              (hl-line-mode -1)
-              (company-mode -1)))
 
   (defun eshell/clear ()
     "Clear the eshell buffer"
@@ -1467,7 +1456,8 @@ The app is chosen from your OS's preference."
          ("M-s b"   . counsel-bookmark)
          ("M-y"     . counsel-yank-pop)
          ("M-x"     . counsel-M-x)
-         ("M-s k"   . bury-buffer))
+         ("M-s k"   . bury-buffer)
+         ("M-<tab>" . mode-line-other-buffer))
   :config
   (setq counsel-git-cmd "rg --files"
         counsel-rg-base-command "rg -i -M 120 --no-heading --line-number --color never %s .")
@@ -1481,6 +1471,12 @@ The app is chosen from your OS's preference."
 (use-package woman
   :ensure nil
   :bind (("M-s m"   . woman)))
+
+(use-package find-file-in-project
+  :bind (:map projectile-mode-map
+              ("M-s f"   . find-file-in-project-by-selected))
+  :config
+  (setq ffip-use-rust-fd t))
 
 (use-package counsel-projectile
   :bind (:map projectile-mode-map
@@ -1504,26 +1500,9 @@ The app is chosen from your OS's preference."
   (ivy-mode)
   :diminish ivy-mode)
 
-(use-package transmission
-  :defer t
-  :config
-  (setq transmission-host "192.168.1.1"
-        transmission-refresh-modes '(transmission-mode
-                                     transmission-files-mode
-                                     transmission-info-mode
-                                     transmission-peers-mode)
-        transmission-refresh-interval 15)
-  (evil-set-initial-state 'transmission-mode 'emacs)
-  (evil-set-initial-state 'transmission-files-mode 'emacs)
-  (evil-set-initial-state 'transmission-info-mode 'emacs)
-  (evil-set-initial-state 'transmission-peers-mode 'emacs))
-
 (use-package eww
   :ensure nil
   :defer t
-  :config
-  (evil-set-initial-state 'eww-bookmark-mode 'motion)
-  (evil-set-initial-state 'eww-mode 'motion)
   :init
   (setq eww-header-line-format nil
         browse-url-browser-function 'browse-url-xdg-open
@@ -1531,7 +1510,10 @@ The app is chosen from your OS's preference."
         ;; shr-use-colors nil ; emacs 26
         shr-use-fonts nil)
   ;; No colours in eww buffers
-  (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore))))
+  (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
+  :config
+  (evil-set-initial-state 'eww-bookmark-mode 'motion)
+  (evil-set-initial-state 'eww-mode 'motion))
 
 (use-package calendar
   :ensure nil
