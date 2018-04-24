@@ -188,14 +188,20 @@ ExitPolicy reject6 *:* # no exits allowed
 ## a private bridge, for example because you'll give out your bridge
 ## address manually to your friends, uncomment this line:
 #PublishServerDescriptor 0
-AvoidDiskWrites 1
-DisableAllSwap 1
+#AvoidDiskWrites 1
+#DisableAllSwap 1
 HardwareAccel 1
 NumCPUs 2
 StrictNodes 1
-ExitNodes {GB}
+ExitNodes {gb}
+ExcludeExitNodes {ru}
+#DNSPort 127.0.0.1:9053 IsolateClientAddr IsolateSOCKSAuth IsolateClientProtocol IsolateDestPort IsolateDestAddr
 DisableDebuggerAttachment 0
 AutomapHostsOnResolve 1
 AutomapHostsSuffixes .exit,.onion
+#ClientDNSRejectInternalAddresses 1
+#ClientRejectInternalAddresses 1
+#ClientUseIPv4 0
+#ExtOrPort auto
 ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy managed
-User tor
+#User tor
