@@ -80,7 +80,8 @@
 
 (eval-when-compile
   (require 'use-package))
-(setq use-package-always-ensure t)
+(setq-default use-package-always-defer t
+              use-package-always-ensure t)
 (require 'diminish)                ;; if you use :diminish
 (require 'bind-key)                ;; if you use any :bind variant
 (require 'dash)
@@ -256,6 +257,7 @@
 
 ;; Theme
 (use-package zenburn-theme              ; Default theme
+  :defer nil
   :config (setq custom-safe-themes t)   ; Treat themes as safe
   (load-theme 'zenburn 'no-confirm))
 
@@ -268,13 +270,13 @@
 
 (use-package desktop
   :ensure nil
+  :defer nil
   :config
   (desktop-save-mode)
   (setq desktop-save t
         desktop-load-locked-desktop t))
 
 (use-package auto-compile
-  :defer t
   :config
   (setq auto-compile-display-buffer nil)
   (auto-compile-on-load-mode)
@@ -329,7 +331,6 @@
   (define-key minibuffer-local-isearch-map [escape] #'minibuffer-keyboard-quit))
 
 (use-package erc
-  :defer t
   :config
   (erc-track-mode t)
   (erc-notify-mode t)
@@ -386,28 +387,23 @@
                              (company-mode))))
 
 (use-package page-break-lines           ; Better looking break lines
-  :defer t
   :config (global-page-break-lines-mode)
   :diminish page-break-lines-mode)
 
 (use-package hideshow
   :ensure nil
-  :defer t
   :hook (prog-mode . hs-minor-mode)
   :diminish hs-minor-mode)
 
 (use-package hl-line
   :ensure nil
-  :defer t
   :hook (prog-mode . hl-line-mode))
 
 (use-package ace-jump-mode
-  :defer t
   :config
   (setq ace-jump-mode-move-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l ?\;)))
 
 (use-package parinfer
-  :defer t
   :hook ((clojure-mode
           emacs-lisp-mode
           common-lisp-mode
@@ -424,7 +420,6 @@
   :diminish parinfer-mode)
 
 (use-package smartparens                ; Parenthesis editing and balancing
-  :defer t
   :hook ((emacs-lisp-mode
           clojure-mode
           cider-repl-mode
@@ -480,7 +475,6 @@
   (add-hook 'minibuffer-setup-hook 'turn-on-smartparens-strict-mode))
 
 (use-package diff-hl                    ; Show changes in fringe
-  :defer t
   :config
   (setq diff-hl-draw-borders nil)
   (diff-hl-flydiff-mode)
@@ -501,15 +495,12 @@
   :diminish highlight-symbol-mode)
 
 (use-package rainbow-delimiters         ; Highlight parens
-  :defer t
   :hook (prog-mode . rainbow-delimiters-mode))
 
 (use-package hi-lock                    ; Custom regexp highlights
-  :defer t
   :config (global-hi-lock-mode))
 
 (use-package savehist                   ; Save minibuffer history
-  :defer t
   :config
   (setq savehist-save-minibuffer-history t
         savehist-additional-variables '(kill-ring search-ring regexp-search-ring)
@@ -518,7 +509,6 @@
 
 (use-package uniquify                   ; Unique buffer names
   :ensure nil
-  :defer t
   :config
   (setq uniquify-buffer-name-style 'post-forward
         uniquify-separator "/"
@@ -536,12 +526,10 @@
         eyebrowse-wrap-around t))
 
 (use-package winner                     ; Winner mode
-  :defer t
   :init (winner-mode))
 
 (use-package ediff-wind                 ; Ediff window management
   :ensure nil
-  :defer t
   :config
   ;; Restore window/buffers when you're finishd ediff-ing.
   (add-hook 'ediff-after-quit-hook-internal 'winner-undo)
@@ -557,11 +545,9 @@
   :diminish undo-tree-mode)
 
 (use-package delsel                     ; Delete the selection instead of insert
-  :defer t
   :config (delete-selection-mode))
 
 (use-package subword                    ; Handle capitalized subwords
-  :defer t
   ;; Do not override `transpose-words', it should not transpose subwords
   :config
   (global-subword-mode t)
@@ -569,7 +555,6 @@
   :diminish subword-mode)
 
 (use-package aggressive-fill-paragraph  ; Automatically fill paragrah
-  :defer t
   :hook (org-mode . aggressive-fill-paragraph-mode))
 
 (use-package saveplace                  ; Save point position in files
@@ -588,7 +573,6 @@
 
 ;;; Syntax checking
 (use-package flycheck                   ; On-the-fly syntax checker
-  :defer t
   :config
   (setq flycheck-standard-error-navigation nil
         flycheck-display-errors-function
@@ -597,13 +581,11 @@
   :diminish flycheck-mode)
 
 (use-package flycheck-clojure          ; Check clojure
-  :defer t
   :after flycheck
   :config
   (flycheck-clojure-setup))
 
 (use-package recentf                    ; Manage recent files
-  :defer t
   :config
   (setq recentf-max-saved-items 200
         recentf-max-menu-items 15))
@@ -652,7 +634,6 @@ The app is chosen from your OS's preference."
               ("Y" . dired-ranger-paste)))
 
 (use-package dired-imenu
-  :defer t
   :after dired)
 
 (use-package autorevert
@@ -682,22 +663,18 @@ The app is chosen from your OS's preference."
   :after company)
 
 (use-package company-jedi               ; Python backend for Company
-  :defer t
   :after company
   :config
   (setq jedi:complete-on-dot t
         jedi:imenu-create-index-function 'jedi:create-flat-imenu-index))
 
 (use-package company-restclient         ; Company support for restclient
-  :defer t
   :after company)
 
 (use-package company-shell              ; Company support for shell functions
-  :defer t
   :after company)
 
 (use-package ispell                     ; Word correction
-  :defer t
   :config
   (setq ispell-program-name (executable-find "hunspell")
         ispell-really-hunspell t
@@ -744,7 +721,6 @@ The app is chosen from your OS's preference."
 
 (use-package vc-hooks                   ; Simple version control
   :ensure nil
-  :defer t
   :config
   (setq vc-handled-backends '(Git))     ; Enable only git
   ;; Always follow symlinks to files in VCS repos
@@ -778,31 +754,24 @@ The app is chosen from your OS's preference."
 
 (use-package evil-magit
   :after magit
-  :defer t
   :config (evil-magit-init))
 
 (use-package git-commit                 ; Git commit message mode
-  :defer t
   :config
   (global-git-commit-mode)
   (remove-hook 'git-commit-finish-query-functions
                #'git-commit-check-style-conventions))
 
 
-(use-package git-timemachine            ; Git timemachine
-  :defer t)
+(use-package git-timemachine)           ; Git timemachine
 
-(use-package gitconfig-mode             ; Git configuration mode
-  :defer t)
+(use-package gitconfig-mode)            ; Git configuration mode
 
-(use-package gitignore-mode             ; .gitignore mode
-  :defer t)
+(use-package gitignore-mode)            ; .gitignore mode
 
-(use-package gitattributes-mode         ; Git attributes mode
-  :defer t)
+(use-package gitattributes-mode)        ; Git attributes mode
 
 (use-package tramp                      ; Remote editing
-  :defer t
   :config
   (setq auto-save-file-name-transforms nil)
 
@@ -810,14 +779,12 @@ The app is chosen from your OS's preference."
                (cons tramp-file-name-regexp nil)))
 
 (use-package org-contacts
-  :defer t
   :ensure org-plus-contrib
   :init
   (setq org-contacts-files '("~/files/org/contacts.org")
         org-contacts-matcher "EMAIL<>\"\"|ALIAS<>\"\"|PHONE<>\"\"|ADDRESS<>\"\"|BIRTHDAY"))
 
 (use-package org                        ; Org Plus Contributions
-  :defer t
   :ensure org-plus-contrib
   :config
   (setq org-src-fontify-natively t
@@ -849,7 +816,6 @@ The app is chosen from your OS's preference."
               (setq-local company-backends '((company-ispell company-files company-dabbrev))))))
 
 (use-package org-capture                ; Fast note taking in Org
-  :defer t
   :ensure org-plus-contrib
   :config
   (setq org-capture-templates
@@ -865,7 +831,6 @@ The app is chosen from your OS's preference."
   (evil-set-initial-state 'org-capture-mode 'emacs))
 
 (use-package ox-html
-  :defer t
   :ensure org-plus-contrib
   :config
   ;; Turn off preamble and postamble in HTML export
@@ -873,7 +838,6 @@ The app is chosen from your OS's preference."
         org-html-postamble nil))
 
 (use-package org-notify
-  :defer t
   :ensure org-plus-contrib
   :config
   (require 'org-notify)
@@ -882,7 +846,6 @@ The app is chosen from your OS's preference."
                                    :period "5m" :duration 60)))
 
 (use-package ox
-  :defer t
   :ensure org-plus-contrib
   :config
   (setq org-export-with-timestamps nil
@@ -891,7 +854,6 @@ The app is chosen from your OS's preference."
 ;;; Programming utilities
 (use-package imenu
   :ensure nil
-  :defer t
   :config
   (setq imenu-auto-rescan t))
 
@@ -957,11 +919,9 @@ The app is chosen from your OS's preference."
               (setq-local company-backends '((company-capf))))))
 
 (use-package elisp-def
-  :defer t
   :hook ((emacs-lisp-mode ielm-mode) . elisp-def-mode))
 
 (use-package cider                      ; Clojure development environment
-  :defer t
   :config
   (setq
    nrepl-prompt-to-kill-server-buffer-on-quit nil
@@ -1035,12 +995,10 @@ The app is chosen from your OS's preference."
               (setq-local company-backends '((company-capf))))))
 
 (use-package clojure-mode-extra-font-locking ; Font-locking for Clojure mode
-  :defer t
   :after clojure-mode)
 
 (use-package nrepl-client               ; Client for Clojure nREPL
   :ensure cider
-  :defer t
   :config (setq nrepl-hide-special-buffers t))
 
 (use-package cider-repl                 ; REPL interactions with CIDER
@@ -1061,7 +1019,6 @@ The app is chosen from your OS's preference."
   (evil-set-initial-state 'cider-repl-mode 'insert))
 
 (use-package clj-refactor               ; Refactoring utilities
-  :defer t
   :hook (clojure-mode . clj-refactor-mode)
   :config
   (setq cljr-suppress-middleware-warnings t
@@ -1080,11 +1037,9 @@ The app is chosen from your OS's preference."
   :diminish (geiser-mode geiser-autodoc-mode))
 
 (use-package clojure-snippets           ; Yasnippets for Clojure
-  :defer t
   :after clojure-mode)
 
 (use-package yasnippet                  ; Snippets
-  :defer t
   :hook (prog-mode . yas-minor-mode)
   :config
   (setq yas-verbosity 1                 ; No need to be so verbose
@@ -1093,12 +1048,10 @@ The app is chosen from your OS's preference."
   :diminish yas-minor-mode)
 
 (use-package yasnippet-snippets
-  :defer t
   :after yasnippet)
 
 ;;; Idris
 (use-package idris-mode                 ; Idris language mode
-  :defer t
   :config
   (setq idris-repl-banner-functions nil
         idris-repl-prompt-style 'short
@@ -1117,13 +1070,11 @@ The app is chosen from your OS's preference."
          ("C-c m p" . sql-set-product)))
 
 (use-package sqlup-mode                 ; Upcase SQL keywords
-  :defer t
   :hook sql-mode
   :diminish sqlup-mode)
 
 ;;; Web development
 (use-package web-mode                   ; Major mode for editing web templates
-  :defer t
   :mode "\\.[sx]?html?\\'"
   :mode "\\.css\\'"
   :mode "\\.xml\\'"
@@ -1149,7 +1100,6 @@ The app is chosen from your OS's preference."
         web-mode-enable-current-column-highlight t))
 
 (use-package js2-mode                   ; Powerful JavaScript mode
-  :defer t
   :config
   ;; Disable parser errors and strict warnings
   (setq js2-mode-show-parse-errors nil
@@ -1166,14 +1116,12 @@ The app is chosen from your OS's preference."
               (js2-imenu-extras-mode))))
 
 (use-package js2-refactor               ; Refactor JavaScript
-  :defer t
   :after js2-mode
   :hook (js2-mode . js2-refactor-mode)
   :config
   (js2r-add-keybindings-with-prefix "C-c m r"))
 
-(use-package less-css-mode
-  :defer t)
+(use-package less-css-mode)
 
 (use-package php-mode                   ; Better PHP support
   :bind (:map php-mode-map
@@ -1181,10 +1129,8 @@ The app is chosen from your OS's preference."
               ([C-return] . ac-php-find-symbol-at-point))
   :mode "\\.php\\'"
   :config
-  (use-package ac-php
-    :defer t)
-  (use-package company-php
-    :defer t)
+  (use-package ac-php)
+  (use-package company-php)
   (add-hook 'php-mode-hook
             (lambda ()
               (require 'ac-php)
@@ -1194,7 +1140,6 @@ The app is chosen from your OS's preference."
 ;;; Other languages
 (use-package sh-script                  ; Shell scripts
   :ensure nil
-  :defer t
   :mode ("\\.zsh\\'" . sh-mode)
   :config
   ;; Use two spaces in shell scripts.
@@ -1206,7 +1151,6 @@ The app is chosen from your OS's preference."
 
 (use-package nxml-mode                  ; XML editing
   :ensure nil
-  :defer t
   :config
   ;; Complete closing tags, and insert XML declarations into empty files
   (setq nxml-slash-auto-complete-flag t
@@ -1218,11 +1162,9 @@ The app is chosen from your OS's preference."
               (setq-local company-backends '((company-nxml))))))
 
 (use-package json-mode                  ; JSON editing
-  :defer t
   :mode "\\.json\\'")
 
 (use-package clang-format               ; Clang format C/C++ code
-  :defer t
   :config
   (setq clang-format-style "LLVM"))
 
@@ -1236,7 +1178,6 @@ The app is chosen from your OS's preference."
               (setq-local company-backends '((company-go))))))
 
 (use-package cmake-mode
-  :defer t
   :mode ("CMakeLists\\.txt\\.cmake\\'")
   :config
   (add-hook 'cmake-mode-hook
@@ -1245,7 +1186,6 @@ The app is chosen from your OS's preference."
 
 (use-package gdb-mi
   :ensure nil
-  :defer t
   :config
   (setq
    ;; use gdb-many-windows by default when `M-x gdb'
@@ -1254,7 +1194,6 @@ The app is chosen from your OS's preference."
    gdb-show-main t))
 
 (use-package modern-cpp-font-lock
-  :defer t
   :config
   (add-hook 'c++-mode-hook #'modern-c++-font-lock-mode)
   :diminish modern-c++-font-lock-mode)
@@ -1279,7 +1218,6 @@ The app is chosen from your OS's preference."
               (setq-local flycheck-clang-language-standard "c11"))))
 
 (use-package tide
-  :defer t
   :hook (typescript-mode . tide-mode)
   :bind (:map tide-mode-map
               ([C-return] . tide-jump-to-definition))
@@ -1294,33 +1232,26 @@ The app is chosen from your OS's preference."
 
 (use-package abbrev
   :ensure nil
-  :defer t
   :config
   (setq save-abbrevs 'silently)
   (setq-default abbrev-mode t)
   :diminish abbrev-mode)
 
 (use-package racket-mode                ; Racket language mode
-  :defer t
   :mode "\\.rkt\\'"
   :hook (racket-repl-mode . company-mode)
   :bind (:map racket-mode-map
               ("M-s j" . racket-run)))
 
-(use-package realgud                    ; Additional debug modes
-  :defer t)
+(use-package realgud)                   ; Additional debug modes
 
-(use-package systemd                    ; Edit Systemd units
-  :defer t)
+(use-package systemd)                   ; Edit Systemd units
 
-(use-package yaml-mode                  ; Edit YAML files
-  :defer t)
+(use-package yaml-mode)                 ; Edit YAML files
 
-(use-package pkgbuild-mode              ; PKGBUILD files for Archlinux
-  :defer t)
+(use-package pkgbuild-mode)             ; PKGBUILD files for Archlinux
 
 (use-package restclient                 ; Interactive HTTP client
-  :defer t
   :config
   (add-hook 'restclient-mode-hook
             (lambda ()
@@ -1328,7 +1259,6 @@ The app is chosen from your OS's preference."
 
 (use-package eldoc                      ; Documentation in the echo area
   :ensure nil
-  :defer t
   :hook (eval-expression-minibuffer-setup-hook . eldoc-mode)
   :config
   ;; Enable Eldoc for `eval-expression', too
@@ -1339,13 +1269,11 @@ The app is chosen from your OS's preference."
 
 (use-package etags                      ; Tag navigation
   :ensure nil
-  :defer t
   :config
   ;; Do not query before reverting TAGS tables
   (setq tags-revert-without-query t))
 
 (use-package compile                    ; Compile from Emacs
-  :defer t
   :config
   (setq compilation-ask-about-save nil
         ;; Kill old compilation processes before starting new ones
@@ -1383,7 +1311,6 @@ The app is chosen from your OS's preference."
             #'colorize-compilation-buffer))
 
 (use-package ggtags
-  :defer t
   :config
   (setq ggtags-use-sqlite3 t))
 
@@ -1434,7 +1361,6 @@ The app is chosen from your OS's preference."
   (evil-set-initial-state 'eshell-mode 'emacs))
 
 (use-package undo-tree
-  :defer t
   :config
   (global-undo-tree-mode)
   (setq undo-tree-visualizer-timestamps t
@@ -1442,7 +1368,6 @@ The app is chosen from your OS's preference."
   :diminish undo-tree-mode)
 
 (use-package counsel-gtags
-  :defer t
   :config
   (setq counsel-gtags-auto-update t)
   (counsel-gtags-mode)
@@ -1502,7 +1427,6 @@ The app is chosen from your OS's preference."
 
 (use-package eww
   :ensure nil
-  :defer t
   :init
   (setq eww-header-line-format nil
         browse-url-browser-function 'browse-url-xdg-open
@@ -1517,7 +1441,6 @@ The app is chosen from your OS's preference."
 
 (use-package calendar
   :ensure nil
-  :defer t
   :config
   (require 'calendar)
   (setq calendar-date-style 'european
@@ -1649,7 +1572,6 @@ The app is chosen from your OS's preference."
   :diminish (epa-mail-mode orgtbl-mode orgstruct-mode mml-mode))
 
 (use-package mu4e-alert
-  :defer t
   :after mu4e
   :init
   (mu4e-alert-set-default-style 'libnotify)
@@ -1658,16 +1580,13 @@ The app is chosen from your OS's preference."
   (setq mu4e-alert-email-notification-types '(subjects)))
 
 (use-package evil-mu4e
-  :defer t
   :after mu4e)
 
 (use-package evil-nerd-commenter
-  :defer t
   :init
   (evilnc-default-hotkeys))
 
 (use-package google-translate
-  :defer t
   :init
   (setq google-translate-default-target-language "ru"
         google-translate-default-source-language "en"
