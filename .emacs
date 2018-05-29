@@ -1,5 +1,5 @@
 ;;; .emacs --- Emacs configuration file
-;; Package-requires: ((emacs "25.1"))
+;;; Package-requires: ((emacs "26.1"))
 
 ;;; Commentary:
 
@@ -61,6 +61,7 @@
               tab-width 2)
 
 (setq-default line-spacing 0.1)
+(setq-default line-move-visual nil)
 ;; Focus new help windows when opened
 (setq-default help-window-select t)
 
@@ -90,6 +91,7 @@
 
 ;; Cursor stretches to the current glyph's width
 (setq x-stretch-cursor t)
+;; Underline below the font bottomline instead of the baseline
 (setq x-underline-at-descent-line t)
 (setq x-gtk-use-system-tooltips nil)        ; Use Emacs tooltips
 (setq cursor-in-non-selected-windows nil)   ; Keep cursors and highlights in current window only
@@ -137,27 +139,17 @@
 (add-to-list 'default-frame-alist '(font . "Pragmata Pro-18"))
 (add-to-list 'default-frame-alist '(cursor-color . "red"))
 
-;; (modify-frame-parameters nil '((inhibit-double-buffering . t)))
-
 ;; Prevent emacs from creating a backup file filename~
 (setq make-backup-files nil)
 
 (setq auto-save-list-file-prefix     "~/.emacs.d/autosave/"
       auto-save-file-name-transforms '((".*" "~/.emacs.d/autosave/" t)))
 
-;; Confirm before quitting Emacs
+;; Do not confirm before quitting Emacs
 (setq confirm-kill-emacs nil)
-
-;; Don't ask for confirmation
-;; (setq confirm-kill-processes nil)      ; emacs 26
-(setq kill-buffer-query-functions
-      (delq 'process-kill-buffer-query-function
-            kill-buffer-query-functions))
+(setq confirm-kill-processes nil)
 
 (setq echo-keystrokes 0.1) ; Faster echo keystrokes
-
-;; Do not pop up *Messages* when clicking on the minibuffer
-(bind-key [mouse-1] #'ignore minibuffer-inactive-mode-map)
 
 ;; Disable annoying prompts
 (fset 'yes-or-no-p 'y-or-n-p)
@@ -194,18 +186,7 @@
 ;; Hide the cursor in inactive windows
 (setq-default cursor-in-non-selected-windows t)
 
-;; Underline below the font bottomline instead of the baseline
-(setq x-underline-at-descent-line t)
-
 (setq pop-up-frames nil)                ; No popup frames
-
-(setq history-length 1000               ; Store more history
-      history-delete-duplicates t)
-
-;; Unset keybinding to use with eyebrowse mode
-(dotimes (n 10)
-  (global-unset-key (kbd (format "C-%d" n)))
-  (global-unset-key (kbd (format "M-%d" n))))
 
 (setq frame-resize-pixelwise t ; Resize by pixels
       frame-title-format
@@ -214,8 +195,6 @@
 
 ;; Use `emacs-lisp-mode' instead of `lisp-interaction-mode' for scratch buffer
 (setq initial-major-mode 'emacs-lisp-mode)
-
-(bind-key "C-x C-k" #'kill-this-buffer) ; Kill only the current buffer
 
 ;;; Formatting functions
 (defun format-buffer (command) "Formatters function, takes COMMAND as argument."
@@ -253,28 +232,30 @@
 
 (use-package server                     ; The server of `emacsclient'
   :ensure nil
-  :config (or (server-running-p) (server-mode)))
+  :init
+  (require 'server)
+  (or (server-running-p) (server-mode)))
 
 ;; Theme
 (use-package zenburn-theme              ; Default theme
-  :defer nil
-  :config (setq custom-safe-themes t)   ; Treat themes as safe
+  :init
+  (setq custom-safe-themes t)           ; Treat themes as safe
   (load-theme 'zenburn 'no-confirm))
 
 (use-package spaceline
   :init
+  (setq spaceline-byte-compile t)
+  (require 'spaceline-config)
   (set-face-attribute 'mode-line nil :box nil)
   (set-face-attribute 'mode-line-inactive nil :box nil)
-  (require 'spaceline-config)
   (spaceline-spacemacs-theme))
 
 (use-package desktop
   :ensure nil
-  :defer nil
-  :config
-  (desktop-save-mode)
+  :init
   (setq desktop-save t
-        desktop-load-locked-desktop t))
+        desktop-load-locked-desktop t)
+  (desktop-save-mode))
 
 (use-package auto-compile
   :config
@@ -284,34 +265,58 @@
 
 (use-package evil
   :bind (:map evil-normal-state-map
-              ("SPC" . evil-ace-jump-char-mode)
-              ("S-SPC" . evil-ace-jump-word-mode)
-              ("C-SPC" . evil-ace-jump-line-mode)
-              ([escape] . keyboard-quit))
-  :bind (:map evil-operator-state-map
-              ("SPC" . evil-ace-jump-char-mode)
-              ("S-SPC" . evil-ace-jump-word-mode)
-              ("C-SPC" . evil-ace-jump-line-mode)
-              ([escape] . evil-normal-state))
-  :bind (:map evil-window-map
+              ("SPC"    . evil-ace-jump-char-mode)
+              ("S-SPC"  . evil-ace-jump-word-mode)
+              ("C-SPC"  . evil-ace-jump-line-mode)
+              ([escape] . keyboard-quit)
+         :map evil-operator-state-map
+              ("SPC"    . evil-ace-jump-char-mode)
+              ("S-SPC"  . evil-ace-jump-word-mode)
+              ("C-SPC"  . evil-ace-jump-line-mode)
+              ([escape] . evil-normal-state)
+         :map evil-window-map
               ("u" . winner-undo)
               ("d" . kill-buffer)
-              ("D" . kill-buffer-and-window))
+              ("D" . kill-buffer-and-window)
+         :map evil-emacs-state-map
+              ([escape] . evil-normal-state)
+         :map evil-visual-state-map
+              ([escape] . keyboard-quit)
+         :map evil-motion-state-map
+              ([escape] . evil-normal-state))
   :init
-  (evil-mode)
-  (define-key evil-emacs-state-map [escape] #'evil-normal-state)
-  (define-key evil-visual-state-map [escape] #'keyboard-quit)
-  (define-key evil-motion-state-map [escape] #'evil-normal-state)
-
-  (setq evil-default-cursor t           ; Do not overwrite cursor colour
+  (setq evil-want-integration nil
+        evil-default-cursor t           ; Do not overwrite cursor colour
         evil-cross-lines t
         evil-move-beyond-eol t
         evil-want-fine-undo t)
+  (evil-mode)
   (evil-set-initial-state 'Info-mode 'motion)
   (evil-set-initial-state 'help-mode 'motion))
 
+(use-package evil-ediff
+  :after evil
+  :init (evil-ediff-init))
+
+(use-package evil-nerd-commenter
+  :after evil
+  :init (evilnc-default-hotkeys))
+
 (use-package minibuffer
   :ensure nil
+  :bind (:map minibuffer-local-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-local-ns-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-local-completion-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-local-must-match-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-local-isearch-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-inactive-mode-map
+              ;; Do not pop up *Messages* when clicking on the minibuffer
+              ([mouse-1] . ignore))
   :config
   ;; Don't let the cursor go into minibuffer prompt
   (let ((default (eval (car (get 'minibuffer-prompt-properties 'standard-value))))
@@ -322,13 +327,7 @@
 
   (setq enable-recursive-minibuffers t     ; Allow to read from minibuffer while in minibuffer.
         use-dialog-box nil)                ; Never use dialogs for minibuffer input
-  (minibuffer-depth-indicate-mode t)       ; Show the minibuffer depth (when larger than 1)
-
-  (define-key minibuffer-local-map [escape] #'minibuffer-keyboard-quit)
-  (define-key minibuffer-local-ns-map [escape] #'minibuffer-keyboard-quit)
-  (define-key minibuffer-local-completion-map [escape] #'minibuffer-keyboard-quit)
-  (define-key minibuffer-local-must-match-map [escape] #'minibuffer-keyboard-quit)
-  (define-key minibuffer-local-isearch-map [escape] #'minibuffer-keyboard-quit))
+  (minibuffer-depth-indicate-mode t))      ; Show the minibuffer depth (when larger than 1)
 
 (use-package erc
   :config
@@ -424,10 +423,8 @@
           clojure-mode
           cider-repl-mode
           inferior-emacs-lisp-mode) . smartparens-strict-mode)
-  :config
-  (smartparens-global-mode)
-  (show-smartparens-global-mode)
-  :config
+  :hook (prog-mode . smartparens-mode)
+  :init
   (setq sp-autoskip-closing-pair 'always
         ;; Don't kill entire symbol on C-k
         sp-hybrid-kill-entire-symbol nil
@@ -447,8 +444,8 @@
               ("C-)"          . sp-forward-sexp)
               ("C-("          . sp-backward-sexp)
               ("C-M-k"        . sp-kill-sexp)
-              ("C-M-<delete>" . sp-splice-sexp-killing-forward))
-  :bind (:map smartparens-strict-mode-map
+              ("C-M-<delete>" . sp-splice-sexp-killing-forward)
+         :map smartparens-strict-mode-map
               ("M-q"          . sp-indent-defun))
   :init
   (sp-pair "(" ")" :wrap "M-(")
@@ -501,11 +498,13 @@
   :config (global-hi-lock-mode))
 
 (use-package savehist                   ; Save minibuffer history
-  :config
-  (setq savehist-save-minibuffer-history t
+  :init
+  (setq history-length 1000             ; Store more history
+        history-delete-duplicates t
+        savehist-save-minibuffer-history t
         savehist-additional-variables '(kill-ring search-ring regexp-search-ring)
         savehist-autosave-interval 180)
-  (savehist-mode t))
+  :config (savehist-mode t))
 
 (use-package uniquify                   ; Unique buffer names
   :ensure nil
@@ -519,6 +518,11 @@
 (use-package eyebrowse                  ; Easy workspaces creation and switching
   :init (eyebrowse-mode)
   :config
+  ;; Unset keybinding to use with eyebrowse mode
+  (dotimes (n 10)
+    (global-unset-key (kbd (format "C-%d" n)))
+    (global-unset-key (kbd (format "M-%d" n))))
+
   (eyebrowse-setup-opinionated-keys)
   (setq eyebrowse-mode-line-separator " "
         eyebrowse-mode-line-style 'always
@@ -548,9 +552,9 @@
   :config (delete-selection-mode))
 
 (use-package subword                    ; Handle capitalized subwords
-  ;; Do not override `transpose-words', it should not transpose subwords
   :config
   (global-subword-mode t)
+  ;; Do not override `transpose-words', it should not transpose subwords
   (bind-key [remap transpose-words] nil subword-mode-map)
   :diminish subword-mode)
 
@@ -643,10 +647,10 @@ The app is chosen from your OS's preference."
   :diminish auto-revert-mode)
 
 (use-package company                    ; Auto-completion
-  :bind (:map company-active-map
+  :bind (([tab] . company-indent-or-complete-common)
+         :map company-active-map
               ("C-n" . company-select-next)
               ("C-p" . company-select-previous))
-  :bind ([tab] . company-indent-or-complete-common)
   :hook ((prog-mode text-mode) . company-mode)
   :config
   (setq company-idle-delay 0.3
@@ -679,8 +683,7 @@ The app is chosen from your OS's preference."
   (setq ispell-program-name (executable-find "hunspell")
         ispell-really-hunspell t
         ispell-check-comments  t
-        ispell-dictionary "en_GB,ru_RU"
-        ispell-choices-win-default-height 5)
+        ispell-dictionary "en_GB,ru_RU")
   (ispell-set-spellchecker-params)
   (ispell-hunspell-add-multi-dic "en_GB,ru_RU"))
 
@@ -722,12 +725,11 @@ The app is chosen from your OS's preference."
 (use-package vc-hooks                   ; Simple version control
   :ensure nil
   :config
-  (setq vc-handled-backends '(Git))     ; Enable only git
+  (setq vc-handled-backends '(Git))     ; Enable only Git
   ;; Always follow symlinks to files in VCS repos
   (setq vc-follow-symlinks t))
 
 (use-package magit                      ; The best Git client out there
-  :defer 3
   :bind (:map magit-status-mode-map
               ("q" . #'mu-magit-kill-buffers))
   :config
@@ -754,14 +756,13 @@ The app is chosen from your OS's preference."
 
 (use-package evil-magit
   :after magit
-  :config (evil-magit-init))
+  :init (evil-magit-init))
 
 (use-package git-commit                 ; Git commit message mode
   :config
   (global-git-commit-mode)
   (remove-hook 'git-commit-finish-query-functions
                #'git-commit-check-style-conventions))
-
 
 (use-package git-timemachine)           ; Git timemachine
 
@@ -839,11 +840,11 @@ The app is chosen from your OS's preference."
 
 (use-package org-notify
   :ensure org-plus-contrib
-  :config
+  :init
   (require 'org-notify)
   (org-notify-start)
-  (org-notify-add 'halfour '(:time "30m" :actions -notify/window
-                                   :period "5m" :duration 60)))
+  (org-notify-add 'halfhour '(:time "30m"  :actions -notify/window
+                              :period "5m" :duration 60)))
 
 (use-package ox
   :ensure org-plus-contrib
@@ -862,38 +863,13 @@ The app is chosen from your OS's preference."
               ([C-return] . jedi:goto-definition))
   :hook (inferior-python-mode . company-mode)
   :config
+  (setq python-indent-offset 2)
   (jedi:setup)
   (add-hook 'ein:connect-mode-hook 'ein:jedi-setup)
-  (setq python-indent-offset 2)
   (add-hook 'python-mode-hook
             (lambda ()
               (setq-local company-backends '((company-jedi)))
               (setq fill-column 79)))) ;; PEP 8 compliant filling rules, 79 chars maximum
-
-(use-package slime-company
-  :config
-  (setq slime-company-completion 'fuzzy)
-  (add-hook 'slime-lisp-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-slime)))))
-  (add-hook 'slime-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-slime))))))
-
-(use-package slime
-  :hook (lisp-mode . slime-mode)
-  :bind (:map slime-mode-map
-              ("M-s j"    . slime)
-              ([C-return] . slime-edit-definition))
-  :config
-  (setq slime-contribs '(slime-fancy
-                         slime-sbcl-exts
-                         slime-quicklisp
-                         slime-company)
-        slime-net-coding-system 'utf-8-unix
-        inferior-lisp-program "sbcl")
-  (slime-setup)
-  :diminish (slime-mode slime-autodoc-mode))
 
 (use-package elisp-mode                 ; Emacs Lisp editing
   :ensure nil
@@ -919,7 +895,8 @@ The app is chosen from your OS's preference."
               (setq-local company-backends '((company-capf))))))
 
 (use-package elisp-def
-  :hook ((emacs-lisp-mode ielm-mode) . elisp-def-mode))
+  :hook ((emacs-lisp-mode ielm-mode) . elisp-def-mode)
+  :diminish elisp-def-mode)
 
 (use-package cider                      ; Clojure development environment
   :config
@@ -954,8 +931,7 @@ The app is chosen from your OS's preference."
                 (symbol-function 'cider-jack-in)
                 #'start-timing-cider-jack-in)
   (setq cider-connection-message-fn
-        #'elapsed-time-cider-jack-in)
-  (evil-set-initial-state 'cider-stacktrace-mode 'insert))
+        #'elapsed-time-cider-jack-in))
 
 (use-package cider-mode                 ; CIDER mode for REPL interaction
   :ensure cider
@@ -969,7 +945,7 @@ The app is chosen from your OS's preference."
   (evil-set-initial-state 'cider-browse-ns-mode 'motion)
   (evil-set-initial-state 'cider--debug-mode 'emacs)
   (evil-set-initial-state 'cider-docview-mode 'emacs)
-  (evil-set-initial-state 'cider-stacktrace-mode 'emacs)
+  (evil-set-initial-state 'cider-stacktrace-mode 'motion)
   (setq cider-show-eval-spinner nil)
   :diminish cider-mode)
 
@@ -1011,6 +987,7 @@ The app is chosen from your OS's preference."
   (setq cider-repl-wrap-history t
         cider-repl-history-size 1000
         cider-repl-history-file (locate-user-emacs-file "cider-repl-history")
+        cider-repl-history-display-style 'one-line
         cider-repl-display-help-banner nil
         cider-repl-history-display-duplicates nil
         cider-repl-pop-to-buffer-on-connect nil
@@ -1019,7 +996,7 @@ The app is chosen from your OS's preference."
   (evil-set-initial-state 'cider-repl-mode 'insert))
 
 (use-package clj-refactor               ; Refactoring utilities
-  :hook (clojure-mode . clj-refactor-mode)
+  :hook (cider-mode . clj-refactor-mode)
   :config
   (setq cljr-suppress-middleware-warnings t
         cljr-add-ns-to-blank-clj-files t
@@ -1029,7 +1006,7 @@ The app is chosen from your OS's preference."
   :diminish clj-refactor-mode)
 
 (use-package geiser                    ; Geiser mode
-  :config
+  :init
   (setq geiser-default-implementation 'chez
         geiser-active-implementations '(chez guile)
         geiser-repl-use-other-window nil
@@ -1050,34 +1027,28 @@ The app is chosen from your OS's preference."
 (use-package yasnippet-snippets
   :after yasnippet)
 
-;;; Idris
 (use-package idris-mode                 ; Idris language mode
+  :bind (:map idris-mode-map
+              ("M-s j" . idris-load-file))
   :config
   (setq idris-repl-banner-functions nil
         idris-repl-prompt-style 'short
         idris-repl-show-idris-version nil
         idris-semantic-source-highlighting nil)
-
-  (evil-set-initial-state 'idris-repl-mode 'emacs)
   :diminish idris-simple-indent-mode)
 
-;;; Databases
 (use-package sql                        ; SQL editing and REPL
   :ensure nil
   :mode ("\\.sql\\'" . sql-mode)
-  :bind (("C-c d s" . sql-connect)
-         :map sql-mode-map
+  :bind (:map sql-mode-map
          ("C-c m p" . sql-set-product)))
 
 (use-package sqlup-mode                 ; Upcase SQL keywords
   :hook sql-mode
   :diminish sqlup-mode)
 
-;;; Web development
 (use-package web-mode                   ; Major mode for editing web templates
-  :mode "\\.[sx]?html?\\'"
-  :mode "\\.css\\'"
-  :mode "\\.xml\\'"
+  :mode ("\\.[sx]?html?\\'" "\\.s?css\\'" "\\.xml\\'")
   :config
   (set-face-background 'web-mode-current-element-highlight-face "grey40")
   (add-hook 'web-mode-hook
@@ -1120,8 +1091,6 @@ The app is chosen from your OS's preference."
   :hook (js2-mode . js2-refactor-mode)
   :config
   (js2r-add-keybindings-with-prefix "C-c m r"))
-
-(use-package less-css-mode)
 
 (use-package php-mode                   ; Better PHP support
   :bind (:map php-mode-map
@@ -1178,7 +1147,7 @@ The app is chosen from your OS's preference."
               (setq-local company-backends '((company-go))))))
 
 (use-package cmake-mode
-  :mode ("CMakeLists\\.txt\\.cmake\\'")
+  :mode "CMakeLists\\.txt\\.cmake\\'"
   :config
   (add-hook 'cmake-mode-hook
             (lambda ()
@@ -1333,7 +1302,7 @@ The app is chosen from your OS's preference."
         eshell-error-if-no-glob t
         eshell-hist-ignoredups t
         eshell-destroy-buffer-when-process-dies t)
-  (setq eshell-visual-commands '("top" "less" "more" "htop" "mc" "ncmpcpp"))
+  (setq eshell-visual-commands '("top" "less" "more" "htop" "mc"))
 
   (setq eshell-visual-subcommands '(("git" "lg" "st" "log" "diff" "show")))
 
@@ -1382,7 +1351,10 @@ The app is chosen from your OS's preference."
          ("M-y"     . counsel-yank-pop)
          ("M-x"     . counsel-M-x)
          ("M-s k"   . bury-buffer)
-         ("M-<tab>" . mode-line-other-buffer))
+         ("M-<tab>" . ivy-switch-buffer)
+         ("C-x C-k" . kill-this-buffer) ; Kill only the current buffer
+         :map counsel-mode-map
+              ([escape] . minibuffer-keyboard-quit))
   :config
   (setq counsel-git-cmd "rg --files"
         counsel-rg-base-command "rg -i -M 120 --no-heading --line-number --color never %s .")
@@ -1398,12 +1370,13 @@ The app is chosen from your OS's preference."
   :bind (("M-s m"   . woman)))
 
 (use-package find-file-in-project
+  :after projectile
   :bind (:map projectile-mode-map
               ("M-s f"   . find-file-in-project-by-selected))
-  :config
-  (setq ffip-use-rust-fd t))
+  :config (setq ffip-use-rust-fd t))
 
 (use-package counsel-projectile
+  :after (projectile counsel)
   :bind (:map projectile-mode-map
               ("M-s a"   . counsel-projectile-rg)))
 
@@ -1411,8 +1384,9 @@ The app is chosen from your OS's preference."
   :bind (("M-s s"   . swiper)))
 
 (use-package ivy
-  :bind (("C-x C-b" . ivy-switch-buffer))
-  :bind (:map ivy-minibuffer-map
+  :bind (("C-x C-b" . ivy-switch-buffer)
+         :map ivy-minibuffer-map
+              ("M-<tab>" . ivy-next-line)
               ([tab] . ivy-alt-done))
   :config
   (setq ivy-use-virtual-buffers t    ; add ‘recentf-mode’ and bookmarks to ‘ivy-switch-buffer’.
@@ -1431,10 +1405,8 @@ The app is chosen from your OS's preference."
   (setq eww-header-line-format nil
         browse-url-browser-function 'browse-url-xdg-open
         shr-width 80
-        ;; shr-use-colors nil ; emacs 26
+        shr-use-colors nil
         shr-use-fonts nil)
-  ;; No colours in eww buffers
-  (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
   :config
   (evil-set-initial-state 'eww-bookmark-mode 'motion)
   (evil-set-initial-state 'eww-mode 'motion))
@@ -1452,27 +1424,28 @@ The app is chosen from your OS's preference."
 
 (use-package mu4e
   :ensure nil
-  :defer 3
+  :commands mu4e
   :config
   (setq mu4e-maildir "~/mail"
         mu4e-attachment-dir "~/tmp"
-        mu4e-context-policy 'pick-first
-        mu4e-user-agent-string "emacs"
-        mu4e-update-interval 180
-        mu4e-view-image-max-width 800 ; enable inline images
-        mu4e-compose-format-flowed t
-        mu4e-hide-index-messages t
-        mu4e-confirm-quit nil
-        mu4e-view-show-addresses t
-        mu4e-headers-skip-duplicates t
-        mu4e-headers-auto-update t
         mu4e-auto-retrieve-keys t
-        mu4e-compose-dont-reply-to-self t
         mu4e-compose-complete-only-personal t
-        mu4e-sent-folder "/"
-        mu4e-view-show-images t
+        mu4e-compose-dont-reply-to-self t
+        mu4e-compose-format-flowed t
+        mu4e-confirm-quit nil
+        mu4e-context-policy 'pick-first
+        mu4e-get-mail-command "getmail -rgetmail_home -rgetmail_work"
+        mu4e-headers-auto-update t
+        mu4e-headers-skip-duplicates t
+        mu4e-hide-index-messages t
         mu4e-org-contacts-file "~/files/org/contacts.org"
-        mu4e-get-mail-command "getmail -rgetmail_home -rgetmail_work")
+        mu4e-sent-folder "/"
+        mu4e-update-interval 180
+        mu4e-user-agent-string "emacs"
+        mu4e-user-mail-address-list '("i@totravel.online" "mankaev@gmail.com")
+        mu4e-view-image-max-width 800 ; enable inline images
+        mu4e-view-show-addresses t
+        mu4e-view-show-images t)
 
   (setq mu4e-contexts
         `( ,(make-mu4e-context
@@ -1550,6 +1523,7 @@ The app is chosen from your OS's preference."
             (lambda ()
               (turn-on-orgtbl)
               (turn-on-orgstruct++)))
+
   (add-hook 'message-send-hook
             (lambda ()
               ;; (mml-secure-message-sign-encrypt)
@@ -1569,28 +1543,54 @@ The app is chosen from your OS's preference."
                '("org-contact-add" . mu4e-action-add-org-contact) t)
   (add-to-list 'mu4e-view-actions
                '("org-contact-add" . mu4e-action-add-org-contact) t)
-  :diminish (epa-mail-mode orgtbl-mode orgstruct-mode mml-mode))
+  :diminish (overwrite-mode epa-mail-mode orgtbl-mode orgstruct-mode mml-mode))
 
 (use-package mu4e-alert
   :after mu4e
   :init
+  (setq mu4e-alert-email-notification-types '(subjects))
   (mu4e-alert-set-default-style 'libnotify)
   (mu4e-alert-enable-notifications)
-  (mu4e-alert-enable-mode-line-display)
-  (setq mu4e-alert-email-notification-types '(subjects)))
+  (mu4e-alert-enable-mode-line-display))
 
 (use-package evil-mu4e
   :after mu4e)
-
-(use-package evil-nerd-commenter
-  :init
-  (evilnc-default-hotkeys))
 
 (use-package google-translate
   :init
   (setq google-translate-default-target-language "ru"
         google-translate-default-source-language "en"
         google-translate-output-destination 'echo-area))
+
+(use-package pdf-tools
+  :magic ("%PDF" . pdf-view-mode)
+  :config (pdf-tools-install))
+
+(use-package calc
+  :custom
+  (math-additional-units
+   '((GiB "1024 * MiB" "Giga Byte")
+     (MiB "1024 * KiB" "Mega Byte")
+     (KiB "1024 * B" "Kilo Byte")
+     (B nil "Byte")
+     (Gib "1024 * Mib" "Giga Bit")
+     (Mib "1024 * Kib" "Mega Bit")
+     (Kib "1024 * b" "Kilo Bit")
+     (b "B / 8" "Bit")))
+  :config (setq math-units-table nil))
+
+(use-package intero
+ :bind (:map intero-mode-map
+             ([C-return] . intero-goto-definition)
+             ("C-c C-c" . haskell-compile))
+ :hook (haskell-mode . intero-mode)
+ :init
+ (setq haskell-compile-cabal-build-alt-command
+         "cd %s && stack clean && stack build --ghc-options -ferror-spans"
+       haskell-compile-cabal-build-command
+         "cd %s && stack build --ghc-options -ferror-spans"
+       haskell-compile-command
+         "stack ghc -- -Wall -ferror-spans -fforce-recomp -c %s"))
 
 (provide '.emacs)
 ;;; .emacs ends here

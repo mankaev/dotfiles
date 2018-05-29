@@ -18,10 +18,10 @@ bindsym $mod+l exec i3lock -c 3F3F3F
 bindsym $mod+Shift+k kill
 
 # start dmenu (a program launcher)
-bindsym $mod+p exec dmenu_run -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200
+bindsym $mod+p exec --no-startup-id dmenu_run -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200
 
 # start passmenu (a password manager)
-bindsym $mod+m exec passmenu -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200 -l 10
+bindsym $mod+m exec --no-startup-id passmenu -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200 -l 10
 
 # make screenshot
 bindsym $mod+Print exec import -window root screenshot.jpg
@@ -90,7 +90,7 @@ workspace 9 output HDMI-2
 
 assign [class="Emacs"]     1
 assign [class="Termite"]   2
-assign [class="Iceweasel"] 3
+assign [class="Firefox"]   3
 assign [class="Inox"]      3
 assign [class="xfreerdp"]  4
 assign [class="Telegram"]  4
