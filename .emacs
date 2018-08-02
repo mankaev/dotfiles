@@ -15,9 +15,10 @@
 ;;; Package setup
 (require 'package)
 (setq package-enable-at-startup nil)
-(setq package-archives '(("gnu"   . "https://elpa.gnu.org/packages/")
-                         ("melpa" . "https://melpa.org/packages/")
-                         ("org"   . "http://orgmode.org/elpa/")))
+(setq package-archives '(("gnu"          . "https://elpa.gnu.org/packages/")
+                         ("melpa"        . "https://melpa.org/packages/")
+                         ("melpa-stable" . "https://stable.melpa.org/packages/")
+                         ("org"          . "http://orgmode.org/elpa/")))
 (package-initialize)
 
 (setq load-prefer-newer t)              ; Always load newer compiled files
@@ -43,15 +44,12 @@
 ;; (setq socks-server '("TOR" "localhost" 9050 5))
 ;; (setq socks-password "")
 
-(require 'tls)
 (setq tls-checktrust t)
 (setq gnutls-verify-error t)
-
-(let ((trustfile "/etc/ssl/cert.pem"))
-  (setq tls-program
-        `(,(format "gnutls-cli --x509cafile %s -p %%p %%h" trustfile)
-          ,(format "openssl s_client -connect %%h:%%p -CAfile %s -no_ssl2 -no_ssl3 -ign_eof" trustfile)))
-  (setq gnutls-trustfiles (list trustfile)))
+(setq gnutls-min-prime-bits 2048)
+(setq network-security-level 'high)
+(setq nsm-save-host-names t)
+(setq tls-program '("gnutls-cli -p %p --dh-bits=2048 --ocsp --x509cafile=%t --priority='SECURE192:+SECURE128:-VERS-ALL:+VERS-TLS1.2:%%PROFILE_MEDIUM' %h" "openssl s_client -connect %h:%p -CAfile %t -no_ssl2 -no_ssl3 -ign_eof"))
 
 ;; This makes long-line buffers usable
 (setq-default bidi-display-reordering nil)
@@ -82,6 +80,8 @@
 (eval-when-compile
   (require 'use-package))
 (setq-default use-package-always-defer t
+              use-package-compute-statistics t
+              ;; use-package-hook-name-suffix nil
               use-package-always-ensure t)
 (require 'diminish)                ;; if you use :diminish
 (require 'bind-key)                ;; if you use any :bind variant
@@ -114,9 +114,6 @@
       scroll-preserve-screen-position 'always ;; Start recentre from top
       recenter-positions '(top middle bottom) ;; Disable mouse scrolling acceleration
       mouse-wheel-progressive-speed nil)
-
-(setq view-read-only t)                 ; View read-only
-(setq large-file-warning-threshold nil) ; No large file warning
 
 (setq utf-translate-cjk-mode nil        ; disable CJK coding/encoding
       buffer-file-coding-system 'utf-8
@@ -242,13 +239,12 @@
   (setq custom-safe-themes t)           ; Treat themes as safe
   (load-theme 'zenburn 'no-confirm))
 
-(use-package spaceline
+(use-package mode-line
+  :ensure nil
   :init
-  (setq spaceline-byte-compile t)
-  (require 'spaceline-config)
   (set-face-attribute 'mode-line nil :box nil)
   (set-face-attribute 'mode-line-inactive nil :box nil)
-  (spaceline-spacemacs-theme))
+  (setq-default mode-line-format '("%e" evil-mode-line-tag mode-line-modified "   " mode-line-buffer-identification "   " mode-line-end-spaces)))
 
 (use-package desktop
   :ensure nil
@@ -263,16 +259,20 @@
   (auto-compile-on-load-mode)
   (auto-compile-on-save-mode))
 
+(use-package show-paren-mode
+  :ensure nil
+  :hook (prog-mode))
+
 (use-package evil
   :bind (:map evil-normal-state-map
-              ("SPC"    . evil-ace-jump-char-mode)
-              ("S-SPC"  . evil-ace-jump-word-mode)
-              ("C-SPC"  . evil-ace-jump-line-mode)
+              ("S-SPC"  . avy-goto-char)
+              ("SPC"    . avy-goto-word-1)
+              ("C-SPC"  . avy-goto-line)
               ([escape] . keyboard-quit)
          :map evil-operator-state-map
-              ("SPC"    . evil-ace-jump-char-mode)
-              ("S-SPC"  . evil-ace-jump-word-mode)
-              ("C-SPC"  . evil-ace-jump-line-mode)
+              ("S-SPC"  . avy-goto-char)
+              ("SPC"    . avy-goto-word-1)
+              ("C-SPC"  . avy-goto-line)
               ([escape] . evil-normal-state)
          :map evil-window-map
               ("u" . winner-undo)
@@ -290,17 +290,26 @@
         evil-cross-lines t
         evil-move-beyond-eol t
         evil-want-fine-undo t)
-  (evil-mode)
+  (evil-mode 1)
   (evil-set-initial-state 'Info-mode 'motion)
   (evil-set-initial-state 'help-mode 'motion))
 
 (use-package evil-ediff
-  :after evil
-  :init (evil-ediff-init))
+  :after evil)
 
 (use-package evil-nerd-commenter
   :after evil
-  :init (evilnc-default-hotkeys))
+  :bind ("M-;" . evilnc-comment-or-uncomment-lines))
+
+(use-package evil-surround
+  :after evil
+  :hook (prog-mode . evil-surround-mode))
+
+(use-package evil-collection
+  :after evil
+  :init
+  (setq evil-collection-company-use-tng t)
+  (evil-collection-init))
 
 (use-package minibuffer
   :ensure nil
@@ -330,6 +339,7 @@
   (minibuffer-depth-indicate-mode t))      ; Show the minibuffer depth (when larger than 1)
 
 (use-package erc
+  :hook  (erc-mode . company-mode)
   :config
   (erc-track-mode t)
   (erc-notify-mode t)
@@ -357,6 +367,7 @@
         erc-insert-away-timestamp-function 'erc-insert-timestamp-left
         erc-log-channels-directory "~/.emacs.d/erc"
         erc-query-display 'buffer
+        erc-join-buffer 'bury
         erc-prompt-for-nickserv-password nil ; Do not ask for password
         erc-save-buffer-on-part nil
         erc-save-queries-on-quit nil
@@ -368,6 +379,7 @@
         ;; Kill buffers for server messages after quitting the server
         erc-kill-server-buffer-on-quit t)
   (erc-update-modules)
+
   (defun erc-global-notify (match-type nick message)
     "Notify when someone sends a message that matches a regexp in `erc-keywords'."
     (when (and (eq match-type 'keyword)
@@ -382,8 +394,7 @@
 
   (add-hook 'erc-text-matched-hook 'erc-global-notify)
   (add-hook 'erc-mode-hook (lambda ()
-                             (setq-local company-backends '((company-capf)))
-                             (company-mode))))
+                             (setq-local company-backends '((company-capf))))))
 
 (use-package page-break-lines           ; Better looking break lines
   :config (global-page-break-lines-mode)
@@ -398,9 +409,7 @@
   :ensure nil
   :hook (prog-mode . hl-line-mode))
 
-(use-package ace-jump-mode
-  :config
-  (setq ace-jump-mode-move-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l ?\;)))
+(use-package avy)
 
 (use-package parinfer
   :hook ((clojure-mode
@@ -412,18 +421,20 @@
   :config
   (setq parinfer-extensions
         '(defaults                      ; should be included.
-           ;; pretty-parens                ; different paren styles for different modes.
+           pretty-parens                ; different paren styles for different modes.
            evil                         ; If you use Evil.
            smart-tab                    ; C-b & C-f jump positions and smart shift with tab & S-tab.
            smart-yank))                 ; Yank behavior depend on mode.
   :diminish parinfer-mode)
 
 (use-package smartparens                ; Parenthesis editing and balancing
-  :hook ((emacs-lisp-mode
-          clojure-mode
-          cider-repl-mode
-          inferior-emacs-lisp-mode) . smartparens-strict-mode)
-  :hook (prog-mode . smartparens-mode)
+  :hook (((emacs-lisp-mode
+           clojure-mode
+           cider-repl-mode
+           eshell-mode
+           inferior-lisp-mode
+           inferior-emacs-lisp-mode) . smartparens-strict-mode)
+         (prog-mode . smartparens-mode))
   :init
   (setq sp-autoskip-closing-pair 'always
         ;; Don't kill entire symbol on C-k
@@ -441,17 +452,21 @@
   :bind (:map smartparens-mode-map
               ("M-r"          . sp-raise-sexp)
               ("M-<delete>"   . sp-unwrap-sexp)
+              ("M-("          . sp-wrap-round)
+              ("M-{"          . sp-wrap-curly)
+              ("M-["          . sp-wrap-square)
               ("C-)"          . sp-forward-sexp)
               ("C-("          . sp-backward-sexp)
+              ("C-<down>"     . sp-down-sexp)
+              ("C-<up>"       . sp-up-sexp)
+              ("M-<down>"     . sp-backward-down-sexp)
+              ("M-<up>"       . sp-backward-up-sexp)
               ("C-M-k"        . sp-kill-sexp)
+              ("C-M-y"        . sp-copy-sexp)
               ("C-M-<delete>" . sp-splice-sexp-killing-forward)
          :map smartparens-strict-mode-map
               ("M-q"          . sp-indent-defun))
   :init
-  (sp-pair "(" ")" :wrap "M-(")
-  (sp-pair "{" "}" :wrap "M-{")
-  (sp-pair "[" "]" :wrap "M-[")
-
   (sp-local-pair 'minibuffer-inactive-mode "'" nil :actions nil)
   (sp-local-pair 'minibuffer-inactive-mode "`" nil :actions nil)
   (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil)
@@ -477,19 +492,6 @@
   (diff-hl-flydiff-mode)
   ;; Highlight changes to the current file in the fringe
   (global-diff-hl-mode))
-
-(use-package highlight-symbol           ; Highlight and jump to symbols
-  :bind (("C-c s %" . highlight-symbol-query-replace)
-         ("C-c s o" . highlight-symbol-occur)
-         ("C-c s n" . highlight-symbol-next-in-defun)
-         ("C-c s p" . highlight-symbol-prev-in-defun))
-  :hook ((prog-mode . highlight-symbol-mode)
-         (prog-mode . highlight-symbol-nav-mode))
-  :config
-  (setq highlight-symbol-idle-delay 0.4 ; Almost immediately
-        ;; Immediately after navigation
-        highlight-symbol-on-navigation-p t)
-  :diminish highlight-symbol-mode)
 
 (use-package rainbow-delimiters         ; Highlight parens
   :hook (prog-mode . rainbow-delimiters-mode))
@@ -558,9 +560,6 @@
   (bind-key [remap transpose-words] nil subword-mode-map)
   :diminish subword-mode)
 
-(use-package aggressive-fill-paragraph  ; Automatically fill paragrah
-  :hook (org-mode . aggressive-fill-paragraph-mode))
-
 (use-package saveplace                  ; Save point position in files
   :config (save-place-mode t))
 
@@ -577,17 +576,12 @@
 
 ;;; Syntax checking
 (use-package flycheck                   ; On-the-fly syntax checker
-  :config
+  :init
   (setq flycheck-standard-error-navigation nil
-        flycheck-display-errors-function
-        #'flycheck-display-error-messages-unless-error-list)
-
+        flycheck-display-errors-function #'flycheck-display-error-messages-unless-error-list
+        flycheck-check-syntax-automatically '(idle-change)
+        flycheck-idle-change-delay 1)
   :diminish flycheck-mode)
-
-(use-package flycheck-clojure          ; Check clojure
-  :after flycheck
-  :config
-  (flycheck-clojure-setup))
 
 (use-package recentf                    ; Manage recent files
   :config
@@ -605,7 +599,8 @@
   :bind (:map dired-mode-map
               ([return]   . dired-find-alternate-file)
               ([C-return] . open-in-external-app))
-  :hook (dired-mode . turn-on-gnus-dired-mode)
+  :hook ((dired-mode . turn-on-gnus-dired-mode)
+         (dired-mode . image-dired-minor-mode))
   :config
   (put 'dired-find-alternate-file 'disabled nil)
 
@@ -629,7 +624,8 @@ The app is chosen from your OS's preference."
         dired-recursive-copies 'always        ; Copy dirs recursively
         dired-recursive-deletes 'top          ; Delete dirs recursively
         ;; -F marks links with @
-        dired-ls-F-marks-symlinks t))
+        dired-ls-F-marks-symlinks t)
+  (evil-set-initial-state 'image-mode 'emacs))
 
 (use-package dired-ranger
   :bind (:map dired-mode-map
@@ -637,8 +633,9 @@ The app is chosen from your OS's preference."
               ("X" . dired-ranger-move)
               ("Y" . dired-ranger-paste)))
 
-(use-package dired-imenu
-  :after dired)
+(use-package dired-collapse)
+
+(use-package dired-imenu)
 
 (use-package autorevert
   :config
@@ -654,13 +651,13 @@ The app is chosen from your OS's preference."
   :hook ((prog-mode text-mode) . company-mode)
   :config
   (setq company-idle-delay 0.3
-        company-minimum-prefix-length 1
+        company-minimum-prefix-length 2
         company-tooltip-align-annotations t
         company-tooltip-flip-when-above t ;; Easy navigation to candidates with M-<n>
         company-show-numbers t            ;; Ignore case
+        company-backends nil              ;; Do not set default backends
         company-dabbrev-ignore-case t     ;; Do not downcase completion
         company-dabbrev-downcase nil)
-
   :diminish company-mode)
 
 (use-package company-web                ; Backend for web development
@@ -688,10 +685,11 @@ The app is chosen from your OS's preference."
   (ispell-hunspell-add-multi-dic "en_GB,ru_RU"))
 
 (use-package flyspell                   ; Spell checking on-the-fly
-  :hook (text-mode . flyspell-mode)
-  :hook (prog-mode . flyspell-prog-mode)
+  :hook ((text-mode . flyspell-mode)
+         (prog-mode . flyspell-prog-mode))
   :config
   (setq flyspell-use-meta-tab nil
+        flyspell-abbrev-p t
         ;; Make Flyspell less chatty
         flyspell-issue-welcome-flag nil
         flyspell-issue-message-flag nil)
@@ -703,7 +701,7 @@ The app is chosen from your OS's preference."
 (use-package flyspell-correct-ivy
   :after flyspell
   :bind (:map flyspell-mode-map
-              ("M-$" . flyspell-correct-word-generic)))
+              ("C-;" . flyspell-correct-word-generic)))
 
 (use-package projectile                 ; Project management
   :config
@@ -843,8 +841,7 @@ The app is chosen from your OS's preference."
   :init
   (require 'org-notify)
   (org-notify-start)
-  (org-notify-add 'halfhour '(:time "30m"  :actions -notify/window
-                              :period "5m" :duration 60)))
+  (org-notify-add 'halfhour '(:time "30m"  :actions -notify/window :period "5m" :duration 60)))
 
 (use-package ox
   :ensure org-plus-contrib
@@ -899,6 +896,7 @@ The app is chosen from your OS's preference."
   :diminish elisp-def-mode)
 
 (use-package cider                      ; Clojure development environment
+  :after clojure-mode
   :config
   (setq
    nrepl-prompt-to-kill-server-buffer-on-quit nil
@@ -909,11 +907,11 @@ The app is chosen from your OS's preference."
    ;; Do not offer to open ClojureScript app in browser
    cider-offer-to-open-cljs-app-in-browser nil)
   (add-hook 'cider-stacktrace-mode-hook
-            '(lambda ()
-               (cider-stacktrace-cycle-cause 2 1)))
+            (lambda ()
+              (cider-stacktrace-cycle-cause 2 1)))
   (add-hook 'cider-connected-hook
-            '(lambda ()
-               (cider-repl-clear-banners)))
+            (lambda ()
+              (cider-repl-clear-banners)))
 
   (defvar cider-jack-in-start-time nil)
 
@@ -931,22 +929,26 @@ The app is chosen from your OS's preference."
                 (symbol-function 'cider-jack-in)
                 #'start-timing-cider-jack-in)
   (setq cider-connection-message-fn
-        #'elapsed-time-cider-jack-in))
+        #'elapsed-time-cider-jack-in)
+  :pin melpa-stable)
 
 (use-package cider-mode                 ; CIDER mode for REPL interaction
   :ensure cider
   :hook (cider-mode . cider-company-enable-fuzzy-completion)
-  :hook cider-repl-mode
   :bind (:map cider-mode-map
               ("M-s r" . cider-refresh)
-              ([C-return] . (lambda () (interactive) (cider-find-var t))))
+              ("M-s h" . cider-doc)
+              ([C-return] . cider-find-var))
   :config
   (evil-set-initial-state 'cider-popup-buffer-mode 'motion)
   (evil-set-initial-state 'cider-browse-ns-mode 'motion)
   (evil-set-initial-state 'cider--debug-mode 'emacs)
   (evil-set-initial-state 'cider-docview-mode 'emacs)
   (evil-set-initial-state 'cider-stacktrace-mode 'motion)
-  (setq cider-show-eval-spinner nil)
+  (evil-set-initial-state 'cider-repl-history-mode 'motion)
+  (setq cider-show-eval-spinner nil
+        cider-prompt-for-symbol nil
+        cider-jdk-src-paths '("/usr/lib/jvm/java-8-openjdk/src"))
   :diminish cider-mode)
 
 (use-package clojure-mode               ; Major mode for Clojure files
@@ -979,10 +981,10 @@ The app is chosen from your OS's preference."
 
 (use-package cider-repl                 ; REPL interactions with CIDER
   :ensure cider
-  :hook (cider-repl-mode . cider-company-enable-fuzzy-completion)
-  :hook (cider-repl-mode . company-mode)
+  :hook ((cider-repl-mode . cider-company-enable-fuzzy-completion)
+         (cider-repl-mode . company-mode))
   :bind (:map cider-repl-mode-map
-              ("C-c C-o" . cider-repl-clear-buffer))
+              ("C-l" . cider-repl-clear-buffer))
   :config
   (setq cider-repl-wrap-history t
         cider-repl-history-size 1000
@@ -993,7 +995,10 @@ The app is chosen from your OS's preference."
         cider-repl-pop-to-buffer-on-connect nil
         cider-repl-scroll-on-output nil
         cider-repl-display-in-current-window t)
-  (evil-set-initial-state 'cider-repl-mode 'insert))
+  (evil-set-initial-state 'cider-repl-mode 'insert)
+  (add-hook 'cider-repl-mode-hook
+            (lambda ()
+              (setq-local company-backends '((company-capf))))))
 
 (use-package clj-refactor               ; Refactoring utilities
   :hook (cider-mode . clj-refactor-mode)
@@ -1014,14 +1019,14 @@ The app is chosen from your OS's preference."
   :diminish (geiser-mode geiser-autodoc-mode))
 
 (use-package clojure-snippets           ; Yasnippets for Clojure
-  :after clojure-mode)
+  :after (yasnippet clojure-mode))
 
 (use-package yasnippet                  ; Snippets
   :hook (prog-mode . yas-minor-mode)
   :config
   (setq yas-verbosity 1                 ; No need to be so verbose
         yas-wrap-around-region t)
-  (yas-reload-all)
+  ;; (yas-reload-all)
   :diminish yas-minor-mode)
 
 (use-package yasnippet-snippets
@@ -1146,6 +1151,10 @@ The app is chosen from your OS's preference."
             (lambda ()
               (setq-local company-backends '((company-go))))))
 
+(use-package fennel-mode
+  :bind (:map fennel-mode-map
+              ("M-s j" . run-lisp)))
+
 (use-package cmake-mode
   :mode "CMakeLists\\.txt\\.cmake\\'"
   :config
@@ -1157,6 +1166,7 @@ The app is chosen from your OS's preference."
   :ensure nil
   :config
   (setq
+   gdb-display-io-nopopup t
    ;; use gdb-many-windows by default when `M-x gdb'
    gdb-many-windows t
    ;; Non-nil means display source file containing the main routine at startup
@@ -1202,8 +1212,11 @@ The app is chosen from your OS's preference."
 (use-package abbrev
   :ensure nil
   :config
+  (setq abbrev-file-name (expand-file-name ".abbrev_defs" user-emacs-directory))
   (setq save-abbrevs 'silently)
   (setq-default abbrev-mode t)
+  (if (file-exists-p abbrev-file-name)
+      (quietly-read-abbrev-file))
   :diminish abbrev-mode)
 
 (use-package racket-mode                ; Racket language mode
@@ -1287,24 +1300,21 @@ The app is chosen from your OS's preference."
   :ensure nil
   :bind (("M-s t" . eshell-here))
   :config
-  (setq eshell-history-size 1024
+  (setq eshell-banner-message ""
+        eshell-destroy-buffer-when-process-dies t
+        eshell-error-if-no-glob t
         eshell-highlight-prompt nil
-        eshell-banner-message ""
-        eshell-save-history-on-exit t
         eshell-hist-ignoredups t
-        eshell-history-size 1000
+        eshell-history-size 1024
+        eshell-prefer-lisp-functions t
         eshell-prompt-function (lambda () "$ ")
         eshell-prompt-regexp "^$ "
-        eshell-where-to-jump 'begin
         eshell-review-quick-commands nil
-        eshell-smart-space-goes-to-end t
+        eshell-save-history-on-exit t
         eshell-scroll-to-bottom-on-input 'all
-        eshell-error-if-no-glob t
-        eshell-hist-ignoredups t
-        eshell-destroy-buffer-when-process-dies t)
+        eshell-smart-space-goes-to-end t
+        eshell-where-to-jump 'begin)
   (setq eshell-visual-commands '("top" "less" "more" "htop" "mc"))
-
-  (setq eshell-visual-subcommands '(("git" "lg" "st" "log" "diff" "show")))
 
   (defun eshell/clear ()
     "Clear the eshell buffer"
@@ -1322,12 +1332,23 @@ The app is chosen from your OS's preference."
     (let ((dir (file-name-directory (or (buffer-file-name)
                                         default-directory))))
       (eshell)
-      (eshell/pushd ".")
-      (eshell/cd dir)
       (goto-char (point-max))
       (eshell-kill-input)
-      (eshell-send-input)))
-  (evil-set-initial-state 'eshell-mode 'emacs))
+      (eshell/pushd ".")
+      (insert (concat "cd " dir))
+      (eshell/cd dir)
+      (eshell-send-input))))
+
+(use-package esh-autosuggest
+  :hook (eshell-mode . esh-autosuggest-mode))
+
+(use-package proced-mode
+  :ensure nil
+  :init
+  (setq proced-auto-update-interval 1
+        proced-auto-update-flag t
+        proced-format 'long
+        proced-sort 'pmem))
 
 (use-package undo-tree
   :config
@@ -1419,7 +1440,6 @@ The app is chosen from your OS's preference."
         calendar-week-start-day 1
         calendar-holidays nil)
 
-  (evil-set-initial-state 'calendar-mode 'emacs)
   (add-hook 'calendar-today-visible-hook 'calendar-mark-today))
 
 (use-package mu4e
@@ -1476,7 +1496,7 @@ The app is chosen from your OS's preference."
                                                                  :to "i@totravel.online")))
              :vars '( ( user-mail-address            . "i@totravel.online")
                       ( user-full-name               . "Ilia Mankaev")
-                      ( mu4e-compose-signature       . "Ilia Mankaev\nAlliance Online CTO")
+                      ( mu4e-compose-signature       . "Ilia Mankaev\nChief Technology Officer\nAlliance Online LLC")
                       ( system-name                  . "totravel.online")
                       ( mu4e-sent-messages-behavior  . sent)
                       ( epg-user-id                  . "6589D1B2C5A8A48A78758C763BBB1BA19FB0378D")
@@ -1553,9 +1573,6 @@ The app is chosen from your OS's preference."
   (mu4e-alert-enable-notifications)
   (mu4e-alert-enable-mode-line-display))
 
-(use-package evil-mu4e
-  :after mu4e)
-
 (use-package google-translate
   :init
   (setq google-translate-default-target-language "ru"
@@ -1564,7 +1581,7 @@ The app is chosen from your OS's preference."
 
 (use-package pdf-tools
   :magic ("%PDF" . pdf-view-mode)
-  :config (pdf-tools-install))
+  :config (pdf-tools-install :no-query))
 
 (use-package calc
   :custom
@@ -1579,18 +1596,18 @@ The app is chosen from your OS's preference."
      (b "B / 8" "Bit")))
   :config (setq math-units-table nil))
 
-(use-package intero
- :bind (:map intero-mode-map
-             ([C-return] . intero-goto-definition)
-             ("C-c C-c" . haskell-compile))
- :hook (haskell-mode . intero-mode)
- :init
- (setq haskell-compile-cabal-build-alt-command
-         "cd %s && stack clean && stack build --ghc-options -ferror-spans"
-       haskell-compile-cabal-build-command
-         "cd %s && stack build --ghc-options -ferror-spans"
-       haskell-compile-command
-         "stack ghc -- -Wall -ferror-spans -fforce-recomp -c %s"))
+;; (use-package intero
+;;  :bind (:map intero-mode-map
+;;              ([C-return] . intero-goto-definition)
+;;              ("C-c C-c" . haskell-compile))
+;;  :hook (haskell-mode . intero-mode)
+;;  :init
+;;  (setq haskell-compile-cabal-build-alt-command
+;;          "cd %s && stack clean && stack build --ghc-options -ferror-spans"
+;;        haskell-compile-cabal-build-command
+;;          "cd %s && stack build --ghc-options -ferror-spans"
+;;        haskell-compile-command
+;;          "stack ghc -- -Wall -ferror-spans -fforce-recomp -c %s"))
 
 (provide '.emacs)
 ;;; .emacs ends here
