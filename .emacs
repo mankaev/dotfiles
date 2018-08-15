@@ -68,27 +68,6 @@
 (tooltip-mode -1)
 (line-number-mode -1)
 
-;; Bootstrap `use-package' and `dash'
-(unless (and (package-installed-p 'use-package)
-             (package-installed-p 'diminish)
-             (package-installed-p 'dash))
-  (package-refresh-contents)
-  (package-install 'use-package)
-  (package-install 'diminish)
-  (package-install 'dash))
-
-(eval-when-compile
-  (require 'use-package))
-(setq-default use-package-always-defer t
-              use-package-compute-statistics t
-              ;; use-package-hook-name-suffix nil
-              use-package-always-ensure t)
-(require 'diminish)                ;; if you use :diminish
-(require 'bind-key)                ;; if you use any :bind variant
-(require 'dash)
-(require 'subr-x)
-(require 'time-date)
-
 ;; Cursor stretches to the current glyph's width
 (setq x-stretch-cursor t)
 ;; Underline below the font bottomline instead of the baseline
@@ -172,14 +151,6 @@
 ;; Disable startup echo area message
 (fset 'display-startup-echo-area-message #'ignore)
 
-;; Configure a reasonable fill column and enable automatic filling
-(setq-default fill-column 80)
-(add-hook 'text-mode-hook #'auto-fill-mode)
-(diminish 'auto-fill-function)
-
-;; Truncate lines during grep
-(add-hook 'grep-mode-hook #'toggle-truncate-lines)
-
 ;; Hide the cursor in inactive windows
 (setq-default cursor-in-non-selected-windows t)
 
@@ -193,58 +164,60 @@
 ;; Use `emacs-lisp-mode' instead of `lisp-interaction-mode' for scratch buffer
 (setq initial-major-mode 'emacs-lisp-mode)
 
-;;; Formatting functions
-(defun format-buffer (command) "Formatters function, takes COMMAND as argument."
-       (let ((file-start (bufferpos-to-filepos (point-min) 'approximate 'utf-8-unix))
-             (file-end (bufferpos-to-filepos (point-max) 'approximate 'utf-8-unix))
-             (cursor (bufferpos-to-filepos (point) 'exact 'utf-8-unix)))
-         (save-excursion
-           (shell-command-on-region (point-min) (point-max) command (current-buffer) t t))
-         (goto-char (filepos-to-bufferpos cursor 'exact 'utf-8-unix))))
+;; Bootstrap `use-package' and `dash'
+(unless (and (package-installed-p 'use-package)
+             (package-installed-p 'diminish)
+             (package-installed-p 'dash))
+  (package-refresh-contents)
+  (package-install 'use-package)
+  (package-install 'diminish)
+  (package-install 'dash))
 
-(defun my-before-save-hook () "Format save hook."
-       (cond ((eq major-mode 'c++-mode) (clang-format-buffer))
-             ((eq major-mode 'go-mode) (gofmt-before-save))
-             ((eq major-mode 'typescript-mode) (tide-format-before-save)))
-             ;; ((eq major-mode 'haskell-mode) (hindent-reformat-buffer))
-             ;; ((eq major-mode 'rust-mode) (rust-format-buffer)))
-             ;; ((member 'cider-mode (--filter (and (boundp it) (symbol-value it)) minor-mode-list)) (cider-format-buffer))
-             ;; ((eq major-mode 'nxml-mode) (format-buffer "xmllint --format -"))
-             ;; ((eq major-mode 'js2-mode) (format-buffer "js-beautify -n -s 2 -"))
-             ;; ((eq major-mode 'php-mode) (format-buffer "fmt.phar --indent_with_space=2 --no-backup -"))
-             ;; ((eq major-mode 'sh-mode) (format-buffer "beautysh -i 2"))
-             ;; ((eq major-mode 'python-mode) (format-buffer "yapf --style='{based_on_style: chromium, indent_width: 2}'"))
-             ;; ((eq major-mode 'perl-mode) (format-buffer "perltidy -i=2 -q -st"))
-             ;; ((eq major-mode 'sql-mode) (format-buffer "sqlformat -"))
+(eval-when-compile
+  (require 'use-package))
+(setq-default use-package-always-defer t
+              use-package-compute-statistics t
+              ;; use-package-hook-name-suffix nil
+              use-package-always-ensure t)
+(require 'diminish)                ;; if you use :diminish
+(require 'bind-key)                ;; if you use any :bind variant
+(require 'dash)
+(require 'subr-x)
+(require 'time-date)
 
-       (delete-trailing-whitespace))
-
-(add-hook 'before-save-hook #'my-before-save-hook)
-
-;; Automatically make scripts executable (hashbang as canary)
-(add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p)
-
-;; Look for unbalanced parens when saving
-(add-hook 'after-save-hook 'check-parens nil t)
+;;; Built-in packages
 
 (use-package server                     ; The server of `emacsclient'
   :ensure nil
-  :init
-  (require 'server)
-  (or (server-running-p) (server-mode)))
-
-;; Theme
-(use-package zenburn-theme              ; Default theme
-  :init
-  (setq custom-safe-themes t)           ; Treat themes as safe
-  (load-theme 'zenburn 'no-confirm))
+  :hook (after-init . server-start))
 
 (use-package mode-line
   :ensure nil
   :init
+  (setq-default mode-line-format
+                '("%e" mode-line-modified "   " mode-line-buffer-identification "   " mode-line-end-spaces))
   (set-face-attribute 'mode-line nil :box nil)
-  (set-face-attribute 'mode-line-inactive nil :box nil)
-  (setq-default mode-line-format '("%e" evil-mode-line-tag mode-line-modified "   " mode-line-buffer-identification "   " mode-line-end-spaces)))
+  (set-face-attribute 'mode-line-inactive nil :box nil))
+
+(use-package hideshow
+  :ensure nil
+  :hook (prog-mode . hs-minor-mode)
+  :diminish hs-minor-mode)
+
+(use-package hl-line
+  :ensure nil
+  :hook (prog-mode . hl-line-mode))
+
+(use-package text-mode
+  :ensure nil
+  :hook (text-mode . auto-fill-mode)
+  :config (setq-default fill-column 65)
+  :diminish auto-fill-function)
+
+(use-package grep
+  :ensure nil
+  ;; Truncate lines during grep
+  :hook (grep-mode . toggle-truncate-lines))
 
 (use-package desktop
   :ensure nil
@@ -253,15 +226,459 @@
         desktop-load-locked-desktop t)
   (desktop-save-mode))
 
+(use-package show-paren-mode
+  :ensure nil
+  :hook (prog-mode))
+
+(use-package ediff-wind                 ; Ediff window management
+  :ensure nil
+  :config
+  ;; Restore window/buffers when you're finishd ediff-ing.
+  (add-hook 'ediff-after-quit-hook-internal 'winner-undo)
+  ;; Prevent Ediff from spamming the frame
+  (setq ediff-window-setup-function #'ediff-setup-windows-plain
+        ediff-split-window-function #'split-window-horizontally))
+
+(use-package eww
+  :ensure nil
+  :init
+  (setq eww-header-line-format nil
+        browse-url-browser-function 'browse-url-xdg-open
+        shr-width 80
+        shr-use-colors nil
+        shr-use-fonts nil)
+  :config
+  (evil-set-initial-state 'eww-bookmark-mode 'motion)
+  (evil-set-initial-state 'eww-mode 'motion))
+
+(use-package calendar
+  :ensure nil
+  :hook (calendar-today-visible . calendar-mark-today)
+  :config
+  (require 'calendar)
+  (setq calendar-date-style 'european
+        calendar-week-start-day 1
+        calendar-holidays nil))
+
+(use-package woman
+  :ensure nil
+  :bind (("M-s m"   . woman)))
+
+(use-package proced-mode
+  :ensure nil
+  :init
+  (setq proced-auto-update-interval 1
+        proced-auto-update-flag t
+        proced-format 'long
+        proced-sort 'pmem))
+
+(use-package etags                      ; Tag navigation
+  :ensure nil
+  :config
+  ;; Do not query before reverting TAGS tables
+  (setq tags-revert-without-query t))
+
+(use-package imenu
+  :ensure nil
+  :config
+  (setq imenu-auto-rescan t))
+
+(use-package sh-script                  ; Shell scripts
+  :ensure nil
+  :hook (sh-mode . (lambda ()
+                     (setq-local company-backends '((company-shell)))))
+  :mode ("\\.zsh\\'" . sh-mode)
+  :config
+  ;; Use two spaces in shell scripts.
+  (setq sh-indentation 2                ; The basic indentation
+        sh-basic-offset 2))             ; The offset for nested indentation
+
+(use-package mu4e
+  :ensure nil
+  :commands mu4e
+  :hook ((message-mode . (lambda () ;; Use Org structures and tables in message mode
+                           (turn-on-orgtbl)
+                           (turn-on-orgstruct++)))
+         (message-send . (lambda ()
+                           ;; (mml-secure-message-sign-encrypt)
+                           (mml-secure-message-sign)))
+         (mu4e-compose-mode . (lambda ()
+                                (set-fill-column 65)
+                                (flyspell-mode)
+                                (epa-mail-mode)))
+         (mu4e-view-mode . epa-mail-mode))
+  :config
+  (setq mu4e-maildir "~/mail"
+        mu4e-attachment-dir "~/tmp"
+        mu4e-auto-retrieve-keys t
+        mu4e-compose-complete-only-personal t
+        mu4e-compose-dont-reply-to-self t
+        mu4e-compose-format-flowed t
+        mu4e-confirm-quit nil
+        mu4e-context-policy 'pick-first
+        mu4e-get-mail-command "getmail -rgetmail_home -rgetmail_work"
+        mu4e-headers-auto-update t
+        mu4e-headers-skip-duplicates t
+        mu4e-hide-index-messages t
+        mu4e-org-contacts-file "~/files/org/contacts.org"
+        mu4e-sent-folder "/"
+        mu4e-update-interval 180
+        mu4e-user-agent-string "emacs"
+        mu4e-user-mail-address-list '("i@totravel.online" "mankaev@gmail.com")
+        mu4e-view-image-max-width 800   ; enable inline images
+        mu4e-view-show-addresses t
+        mu4e-view-show-images t)
+
+  (setq mu4e-contexts
+        `( ,(make-mu4e-context
+             :name "gmail"
+             :enter-func (lambda () (mu4e-message "Entering Gmail context"))
+             ;; we match based on the contact-fields of the message
+             :match-func (lambda (msg)
+                           (when msg
+                             (mu4e-message-contact-field-matches msg
+                                                                 :to "mankaev@gmail.com")))
+             :vars '( ( user-mail-address            . "mankaev@gmail.com")
+                      ( user-full-name               . "Ilya Mankaev")
+                      ( mu4e-compose-signature       . "Ilya Mankaev\n")
+                      ( system-name                  . "mankaev")
+                      ( mu4e-sent-messages-behavior  . delete)
+                      ( epg-user-id                  . "C71CD9843FE0986C61CC26722CBACD9B90C9D091")
+                      ( smtpmail-stream-type         . starttls)
+                      ( smtpmail-default-smtp-server . "smtp.gmail.com")
+                      ( smtpmail-smtp-server         . "smtp.gmail.com")
+                      ( smtpmail-smtp-service        . 587)))
+           ,(make-mu4e-context
+             :name "alliance"
+             :enter-func (lambda () (mu4e-message "Entering Alliance context"))
+             ;; we match based on the contact-fields of the message
+             :match-func (lambda (msg)
+                           (when msg
+                             (mu4e-message-contact-field-matches msg
+                                                                 :to "i@totravel.online")))
+             :vars '( ( user-mail-address            . "i@totravel.online")
+                      ( user-full-name               . "Ilia Mankaev")
+                      ( mu4e-compose-signature       . "Ilia Mankaev\nChief Technology Officer\nAlliance Online LLC")
+                      ( system-name                  . "totravel.online")
+                      ( mu4e-sent-messages-behavior  . sent)
+                      ( epg-user-id                  . "6589D1B2C5A8A48A78758C763BBB1BA19FB0378D")
+                      ( smtpmail-stream-type         . starttls)
+                      ( smtpmail-default-smtp-server . "smtp.yandex.com")
+                      ( smtpmail-smtp-server         . "smtp.yandex.com")
+                      ( smtpmail-smtp-service        . 587)))))
+
+  (setq mu4e-headers-fields '((:human-date . 8)
+                              (:from . 35)
+                              (:thread-subject . 80))
+        mu4e-view-fields '(:from
+                           :to
+                           :cc
+                           :bcc
+                           :date
+                           :subject
+                           :signature
+                           :attachments))
+
+  (require 'smtpmail-async)
+  (setq mail-user-agent 'mu4e-user-agent
+        read-mail-command    'mu4e
+        gnus-dired-mail-mode 'mu4e-user-agent)
+  (setq message-send-mail-function 'async-smtpmail-send-it
+        message-required-mail-headers '(From Subject Date (optional . In-Reply-To))
+        mail-specify-envelope-from t ; Use from field to specify sender name.
+        message-kill-buffer-on-exit t
+        message-citation-line-format "On %a %d %b %Y at %R UTC, %f wrote:\n"
+        message-citation-line-function 'message-insert-formatted-citation-line
+        message-cite-reply-position 'above
+        mail-envelope-from 'header) ; otherwise `user-mail-address' is used.
+  (setq mml2015-use 'epg
+        mml-secure-openpgp-encrypt-to-self t
+        mml-secure-openpgp-always-trust nil
+        mml-secure-cache-passphrase t
+        mml-secure-passphrase-cache-expiry '36000
+        mml-secure-openpgp-sign-with-sender t
+        mm-verify-option 'always
+        mm-decrypt-option 'always)
+
+  (add-to-list 'mu4e-view-actions
+               '("browse mail" . mu4e-action-view-in-browser) t)
+  (add-to-list 'mu4e-headers-actions
+               '("org-contact-add" . mu4e-action-add-org-contact) t)
+  (add-to-list 'mu4e-view-actions
+               '("org-contact-add" . mu4e-action-add-org-contact) t)
+  :diminish (overwrite-mode epa-mail-mode orgtbl-mode orgstruct-mode mml-mode))
+
+(use-package eshell                     ; Emacs command shell
+  :ensure nil
+  :bind (("M-s t" . eshell-here))
+  :config
+  (setq eshell-banner-message ""
+        eshell-destroy-buffer-when-process-dies t
+        eshell-error-if-no-glob t
+        eshell-highlight-prompt nil
+        eshell-hist-ignoredups t
+        eshell-history-size 1024
+        eshell-prefer-lisp-functions t
+        eshell-prompt-function (lambda () "$ ")
+        eshell-prompt-regexp "^$ "
+        eshell-review-quick-commands nil
+        eshell-save-history-on-exit t
+        eshell-scroll-to-bottom-on-input 'all
+        eshell-smart-space-goes-to-end t
+        eshell-where-to-jump 'begin)
+  (setq eshell-visual-commands '("top" "less" "more" "htop" "mc"))
+
+  (defun eshell/clear ()
+    "Clear the eshell buffer"
+    (interactive)
+    (let ((eshell-buffer-maximum-lines 0))
+      (eshell-truncate-buffer)))
+
+  (defun eshell/magit ()
+    "Function to open magit-status for the current directory"
+    (magit-status-internal "."))
+
+  (defun eshell-here ()
+    "Go to eshell and set current directory to the buffer's directory"
+    (interactive)
+    (let ((dir (file-name-directory (or (buffer-file-name)
+                                        default-directory))))
+      (eshell)
+      (goto-char (point-max))
+      (eshell-kill-input)
+      (eshell/pushd ".")
+      (insert (concat "cd " dir))
+      (eshell/cd dir)
+      (eshell-send-input))))
+
+(use-package eldoc                      ; Documentation in the echo area
+  :ensure nil
+  :hook (eval-expression-minibuffer-setup . eldoc-mode)
+  :config
+  ;; Enable Eldoc for `eval-expression', too
+  (setq-default eldoc-documentation-function #'describe-char-eldoc)
+  (setq eldoc-idle-delay 0.1)  ; Show eldoc more promptly
+  :diminish eldoc-mode)
+
+(use-package abbrev
+  :ensure nil
+  :config
+  (setq abbrev-file-name (expand-file-name ".abbrev_defs" user-emacs-directory))
+  (setq save-abbrevs 'silently)
+  (setq-default abbrev-mode t)
+  (if (file-exists-p abbrev-file-name)
+      (quietly-read-abbrev-file))
+  :diminish abbrev-mode)
+
+(use-package cc-mode
+  :ensure nil
+  :hook ((c++-mode . (lambda ()
+                       (add-hook 'before-save-hook 'clang-format-buffer nil 'local)
+                       (setq-local company-backends '((company-clang company-c-headers)))
+                       (setq-local flycheck-gcc-language-standard "c++17")
+                       (setq-local flycheck-clang-language-standard "c++17")))
+         (c-mode . (lambda ()
+                     (add-hook 'before-save-hook 'clang-format-buffer nil 'local)
+                     (setq-local company-backends '((company-clang company-c-headers)))
+                     (setq-local flycheck-gcc-language-standard "c11")
+                     (setq-local flycheck-clang-language-standard "c11"))))
+  :bind (:map c-mode-map
+              ("C-c C-c" . projectile-compile-project)
+              ([C-M-tab] . clang-format-region)
+              ([C-return] . counsel-gtags-dwim))
+  :config (setq c-basic-offset 2))
+
+(use-package minibuffer
+  :ensure nil
+  :bind (:map minibuffer-local-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-local-ns-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-local-completion-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-local-must-match-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-local-isearch-map
+              ([escape] . minibuffer-keyboard-quit)
+         :map minibuffer-inactive-mode-map
+              ;; Do not pop up *Messages* when clicking on the minibuffer
+              ([mouse-1] . ignore))
+  :config
+  (setq enable-recursive-minibuffers t     ; Allow to read from minibuffer while in minibuffer.
+        use-dialog-box nil)                ; Never use dialogs for minibuffer input
+  (minibuffer-depth-indicate-mode t))      ; Show the minibuffer depth (when larger than 1)
+
+(use-package erc
+  :ensure nil
+  :hook  ((erc-mode . (lambda ()
+                        (company-mode)
+                        (setq-local company-backends '((company-capf)))))
+          (erc-text-matched . erc-global-notify))
+  :config
+  (erc-track-mode t)
+  (erc-notify-mode t)
+  (erc-completion-mode t)
+  (erc-fill-mode t)
+  (erc-match-mode t)
+  (erc-netsplit-mode t)
+  (erc-services-mode t)
+  (erc-timestamp-mode t)
+  (erc-spelling-mode t)
+  (erc-dcc-mode t)
+  (setq erc-track-exclude-types '("JOIN" "KICK" "PART" "QUIT" "MODE"
+                                  "324" "329" "332" "333" "353" "447")
+        erc-modules '(autojoin button completion fill irccontrols list
+                               log match menu move-to-prompt netsplit networks
+                               noncommands notifications readonly ring stamp
+                               track)
+        erc-hide-list '("JOIN" "PART" "QUIT" "NICK")
+        erc-nick "mankaev"
+        erc-user-full-name "Ilia Mankaev"
+        erc-server "127.0.0.1"
+        erc-port "6667"
+        erc-server-coding-system '(utf-8 . utf-8)
+        erc-insert-timestamp-function 'erc-insert-timestamp-left
+        erc-insert-away-timestamp-function 'erc-insert-timestamp-left
+        erc-log-channels-directory "~/.emacs.d/erc"
+        erc-query-display 'buffer
+        erc-join-buffer 'bury
+        erc-prompt-for-nickserv-password nil ; Do not ask for password
+        erc-save-buffer-on-part nil
+        erc-save-queries-on-quit nil
+        erc-log-write-after-send t
+        erc-log-write-after-insert t
+        erc-interpret-mirc-color t ; Interpret mIRC-style color commands in IRC chats
+        erc-kill-buffer-on-part t ; Kill buffers for channels after /part
+        erc-kill-queries-on-quit t ; Kill buffers for private queries after quitting the server
+        ;; Kill buffers for server messages after quitting the server
+        erc-kill-server-buffer-on-quit t)
+  (erc-update-modules)
+
+  (defun erc-global-notify (match-type nick message)
+    "Notify when someone sends a message that matches a regexp in `erc-keywords'."
+    (when (and (eq match-type 'keyword)
+               ;; I don't want to see anything from the erc server
+               (null (string-match "^[sS]erver" nick))
+               ;; or bots
+               (null (string-match "\\(bot\\|serv\\)!" nick)))
+      (notifications-notify :title nick :body message :urgency 'normal))))
+
+(use-package gdb-mi
+  :ensure nil
+  :config
+  (setq
+   gdb-display-io-nopopup t
+   ;; use gdb-many-windows by default when `M-x gdb'
+   gdb-many-windows t
+   ;; Non-nil means display source file containing the main routine at startup
+   gdb-show-main t))
+
+(use-package nxml-mode                  ; XML editing
+  :ensure nil
+  :hook (nxml-mode . (lambda ()
+                       (setq-local company-backends '((company-nxml)))))
+  :config
+  ;; Complete closing tags, and insert XML declarations into empty files
+  (setq nxml-slash-auto-complete-flag t
+        nxml-auto-insert-xml-declaration-flag t
+        ;; Treat elements (with children) as sexps
+        nxml-sexp-element-flag t))
+
+(use-package sql                        ; SQL editing and REPL
+  :ensure nil
+  :mode ("\\.sql\\'" . sql-mode)
+  :bind (:map sql-mode-map
+         ("C-c m p" . sql-set-product)))
+
+(use-package elisp-mode                 ; Emacs Lisp editing
+  :ensure nil
+  :hook (emacs-lisp-mode . (lambda ()
+                             (add-use-package-to-imenu)
+                             (setq-local company-backends '((company-capf)))))
+  :bind (:map emacs-lisp-mode-map
+              ([C-return] . elisp-def))
+  :interpreter ("emacs" . emacs-lisp-mode)
+  :config
+  (defconst use-package-imenu-expression
+    `("Use Package" ,(rx "(use-package" (optional "-with-elapsed-timer")
+                         symbol-end (1+ (syntax whitespace)) symbol-start
+                         (group-n 1 (1+ (or (syntax word) (syntax symbol))))
+                         symbol-end) 1)
+    "IMenu expression for `use-package' declarations.")
+
+  (defun add-use-package-to-imenu ()
+    "Add `use-package' declarations to `imenu'."
+    (add-to-list 'imenu-generic-expression
+                 use-package-imenu-expression)))
+
+(use-package vc-hooks                   ; Simple version control
+  :ensure nil
+  :config
+  (setq vc-handled-backends '(Git))     ; Enable only Git
+  ;; Always follow symlinks to files in VCS repos
+  (setq vc-follow-symlinks t))
+
+(use-package dired                      ; File manager
+  :ensure nil
+  :bind (:map dired-mode-map
+              ([return]   . dired-find-alternate-file)
+              ([C-return] . open-in-external-app))
+  :hook ((dired-mode . turn-on-gnus-dired-mode)
+         (dired-mode . image-dired-minor-mode))
+  :config
+  (put 'dired-find-alternate-file 'disabled nil)
+
+  (defun open-in-external-app ()
+    "Open the file where point is or the marked files in external app.
+The app is chosen from your OS's preference."
+    (interactive)
+    (let* ((file-list
+            (dired-get-marked-files)))
+      (mapc (lambda (file-path)
+              (let ((process-connection-type nil))
+                (start-process "" nil "xdg-open" file-path))) file-list)))
+  (setq dired-no-confirm
+        '(byte-compile chgrp chmod chown copy delete load move symlink))
+  (setq dired-auto-revert-buffer t            ; Revert buffers on revisiting
+        dired-listing-switches
+        "-lFaGh1v --group-directories-first"  ; Add ls switches
+        global-auto-revert-non-file-buffers t ; Auto refresh Dired
+        auto-revert-verbose nil               ; But be quiet about it
+        dired-dwim-target t                   ; Use other pane as target
+        dired-recursive-copies 'always        ; Copy dirs recursively
+        dired-recursive-deletes 'top          ; Delete dirs recursively
+        ;; -F marks links with @
+        dired-ls-F-marks-symlinks t)
+  (evil-set-initial-state 'image-mode 'emacs))
+
+(use-package uniquify                   ; Unique buffer names
+  :ensure nil
+  :config
+  (setq uniquify-buffer-name-style 'post-forward
+        uniquify-separator "/"
+        uniquify-after-kill-buffer-p t  ; Rename after killing uniquified
+        ;; Ignore special buffers
+        uniquify-ignore-buffers-re "^\\*"))
+
+;;; Installed Packages
+
+;; Theme
+(use-package zenburn-theme              ; Default theme
+  :init
+  (setq custom-safe-themes t)           ; Treat themes as safe
+  (load-theme 'zenburn 'no-confirm))
+
+(use-package racket-mode                ; Racket language mode
+  :mode "\\.rkt\\'"
+  :hook (racket-repl-mode . company-mode)
+  :bind (:map racket-mode-map
+              ("M-s j" . racket-run)))
+
 (use-package auto-compile
   :config
   (setq auto-compile-display-buffer nil)
   (auto-compile-on-load-mode)
   (auto-compile-on-save-mode))
-
-(use-package show-paren-mode
-  :ensure nil
-  :hook (prog-mode))
 
 (use-package evil
   :bind (:map evil-normal-state-map
@@ -311,103 +728,9 @@
   (setq evil-collection-company-use-tng t)
   (evil-collection-init))
 
-(use-package minibuffer
-  :ensure nil
-  :bind (:map minibuffer-local-map
-              ([escape] . minibuffer-keyboard-quit)
-         :map minibuffer-local-ns-map
-              ([escape] . minibuffer-keyboard-quit)
-         :map minibuffer-local-completion-map
-              ([escape] . minibuffer-keyboard-quit)
-         :map minibuffer-local-must-match-map
-              ([escape] . minibuffer-keyboard-quit)
-         :map minibuffer-local-isearch-map
-              ([escape] . minibuffer-keyboard-quit)
-         :map minibuffer-inactive-mode-map
-              ;; Do not pop up *Messages* when clicking on the minibuffer
-              ([mouse-1] . ignore))
-  :config
-  ;; Don't let the cursor go into minibuffer prompt
-  (let ((default (eval (car (get 'minibuffer-prompt-properties 'standard-value))))
-        (dont-touch-prompt-prop '(cursor-intangible t)))
-    (setq minibuffer-prompt-properties
-          (append default dont-touch-prompt-prop))
-    (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode))
-
-  (setq enable-recursive-minibuffers t     ; Allow to read from minibuffer while in minibuffer.
-        use-dialog-box nil)                ; Never use dialogs for minibuffer input
-  (minibuffer-depth-indicate-mode t))      ; Show the minibuffer depth (when larger than 1)
-
-(use-package erc
-  :hook  (erc-mode . company-mode)
-  :config
-  (erc-track-mode t)
-  (erc-notify-mode t)
-  (erc-completion-mode t)
-  (erc-fill-mode t)
-  (erc-match-mode t)
-  (erc-netsplit-mode t)
-  (erc-services-mode t)
-  (erc-timestamp-mode t)
-  (erc-spelling-mode t)
-  (erc-dcc-mode t)
-  (setq erc-track-exclude-types '("JOIN" "KICK" "PART" "QUIT" "MODE"
-                                  "324" "329" "332" "333" "353" "447")
-        erc-modules '(autojoin button completion fill irccontrols list
-                               log match menu move-to-prompt netsplit networks
-                               noncommands notifications readonly ring stamp
-                               track)
-        erc-hide-list '("JOIN" "PART" "QUIT" "NICK")
-        erc-nick "mankaev"
-        erc-user-full-name "Ilia Mankaev"
-        erc-server "127.0.0.1"
-        erc-port "6667"
-        erc-server-coding-system '(utf-8 . utf-8)
-        erc-insert-timestamp-function 'erc-insert-timestamp-left
-        erc-insert-away-timestamp-function 'erc-insert-timestamp-left
-        erc-log-channels-directory "~/.emacs.d/erc"
-        erc-query-display 'buffer
-        erc-join-buffer 'bury
-        erc-prompt-for-nickserv-password nil ; Do not ask for password
-        erc-save-buffer-on-part nil
-        erc-save-queries-on-quit nil
-        erc-log-write-after-send t
-        erc-log-write-after-insert t
-        erc-interpret-mirc-color t ; Interpret mIRC-style color commands in IRC chats
-        erc-kill-buffer-on-part t  ; Kill buffers for channels after /part
-        erc-kill-queries-on-quit t ; Kill buffers for private queries after quitting the server
-        ;; Kill buffers for server messages after quitting the server
-        erc-kill-server-buffer-on-quit t)
-  (erc-update-modules)
-
-  (defun erc-global-notify (match-type nick message)
-    "Notify when someone sends a message that matches a regexp in `erc-keywords'."
-    (when (and (eq match-type 'keyword)
-               ;; I don't want to see anything from the erc server
-               (null (string-match "^[sS]erver" nick))
-               ;; or bots
-               (null (string-match "\\(bot\\|serv\\)!" nick)))
-      (notifications-notify
-       :title nick
-       :body message
-       :urgency 'normal)))
-
-  (add-hook 'erc-text-matched-hook 'erc-global-notify)
-  (add-hook 'erc-mode-hook (lambda ()
-                             (setq-local company-backends '((company-capf))))))
-
 (use-package page-break-lines           ; Better looking break lines
   :config (global-page-break-lines-mode)
   :diminish page-break-lines-mode)
-
-(use-package hideshow
-  :ensure nil
-  :hook (prog-mode . hs-minor-mode)
-  :diminish hs-minor-mode)
-
-(use-package hl-line
-  :ensure nil
-  :hook (prog-mode . hl-line-mode))
 
 (use-package avy)
 
@@ -449,6 +772,9 @@
 (use-package smartparens-config         ; Configure Smartparens
   :ensure smartparens
   :after smartparens
+  :hook ((smartparens-mode . (lambda ()
+                               (add-hook 'after-save-hook 'check-parens nil 'local)))
+         (minibuffer-setup . turn-on-smartparens-strict-mode))
   :bind (:map smartparens-mode-map
               ("M-r"          . sp-raise-sexp)
               ("M-<delete>"   . sp-unwrap-sexp)
@@ -482,16 +808,13 @@
   (sp-local-pair 'org-mode "_" "_" :unless '(sp-point-after-word-p) :wrap "C-_")
   (sp-local-pair 'org-mode "/" "/" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC")))
   (sp-local-pair 'org-mode "~" "~" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC")))
-  (sp-local-pair 'org-mode "=" "=" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC")))
-
-  (add-hook 'minibuffer-setup-hook 'turn-on-smartparens-strict-mode))
+  (sp-local-pair 'org-mode "=" "=" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC"))))
 
 (use-package diff-hl                    ; Show changes in fringe
-  :config
-  (setq diff-hl-draw-borders nil)
-  (diff-hl-flydiff-mode)
-  ;; Highlight changes to the current file in the fringe
-  (global-diff-hl-mode))
+  :hook (prog-mode . (lambda ()
+                       (diff-hl-mode)
+                       (diff-hl-flydiff-mode)))
+  :config (setq diff-hl-draw-borders nil))
 
 (use-package rainbow-delimiters         ; Highlight parens
   :hook (prog-mode . rainbow-delimiters-mode))
@@ -508,40 +831,17 @@
         savehist-autosave-interval 180)
   :config (savehist-mode t))
 
-(use-package uniquify                   ; Unique buffer names
-  :ensure nil
-  :config
-  (setq uniquify-buffer-name-style 'post-forward
-        uniquify-separator "/"
-        uniquify-after-kill-buffer-p t  ; Rename after killing uniquified
-        ;; Ignore special buffers
-        uniquify-ignore-buffers-re "^\\*"))
-
 (use-package eyebrowse                  ; Easy workspaces creation and switching
-  :init (eyebrowse-mode)
-  :config
-  ;; Unset keybinding to use with eyebrowse mode
-  (dotimes (n 10)
-    (global-unset-key (kbd (format "C-%d" n)))
-    (global-unset-key (kbd (format "M-%d" n))))
-
-  (eyebrowse-setup-opinionated-keys)
+  :init
   (setq eyebrowse-mode-line-separator " "
         eyebrowse-mode-line-style 'always
         eyebrowse-new-workspace t
-        eyebrowse-wrap-around t))
+        eyebrowse-wrap-around t)
+  (eyebrowse-setup-opinionated-keys)
+  (eyebrowse-mode))
 
 (use-package winner                     ; Winner mode
-  :init (winner-mode))
-
-(use-package ediff-wind                 ; Ediff window management
-  :ensure nil
-  :config
-  ;; Restore window/buffers when you're finishd ediff-ing.
-  (add-hook 'ediff-after-quit-hook-internal 'winner-undo)
-  ;; Prevent Ediff from spamming the frame
-  (setq ediff-window-setup-function #'ediff-setup-windows-plain
-        ediff-split-window-function #'split-window-horizontally))
+  :hook (after-init . winner-mode))
 
 (use-package undo-tree                  ; Show buffer changes as a tree
   :config
@@ -593,39 +893,6 @@
   :mode "\\.md\\'"
   :config
   (setq markdown-fontify-code-blocks-natively t))
-
-(use-package dired                      ; File manager
-  :ensure nil
-  :bind (:map dired-mode-map
-              ([return]   . dired-find-alternate-file)
-              ([C-return] . open-in-external-app))
-  :hook ((dired-mode . turn-on-gnus-dired-mode)
-         (dired-mode . image-dired-minor-mode))
-  :config
-  (put 'dired-find-alternate-file 'disabled nil)
-
-  (defun open-in-external-app ()
-    "Open the file where point is or the marked files in external app.
-The app is chosen from your OS's preference."
-    (interactive)
-    (let* ((file-list
-            (dired-get-marked-files)))
-      (mapc (lambda (file-path)
-              (let ((process-connection-type nil))
-                (start-process "" nil "xdg-open" file-path))) file-list)))
-  (setq dired-no-confirm
-        '(byte-compile chgrp chmod chown copy delete load move symlink))
-  (setq dired-auto-revert-buffer t            ; Revert buffers on revisiting
-        dired-listing-switches
-        "-lFaGh1v --group-directories-first"  ; Add ls switches
-        global-auto-revert-non-file-buffers t ; Auto refresh Dired
-        auto-revert-verbose nil               ; But be quiet about it
-        dired-dwim-target t                   ; Use other pane as target
-        dired-recursive-copies 'always        ; Copy dirs recursively
-        dired-recursive-deletes 'top          ; Delete dirs recursively
-        ;; -F marks links with @
-        dired-ls-F-marks-symlinks t)
-  (evil-set-initial-state 'image-mode 'emacs))
 
 (use-package dired-ranger
   :bind (:map dired-mode-map
@@ -712,27 +979,16 @@ The app is chosen from your OS's preference."
         projectile-mode-line '(:eval (format " Proj[%s]" (projectile-project-name))))
 
   (projectile-mode)
-  (projectile-register-project-type 'lein-cljs '("project.clj")
-                                    :compile "lein cljsbuild once"
-                                    :test "lein cljsbuild test")
   ;; Remove dead projects when Emacs is idle
   (run-with-idle-timer 10 nil #'projectile-cleanup-known-projects)
-
-  :diminish projectile-mode)
-
-(use-package vc-hooks                   ; Simple version control
-  :ensure nil
-  :config
-  (setq vc-handled-backends '(Git))     ; Enable only Git
-  ;; Always follow symlinks to files in VCS repos
-  (setq vc-follow-symlinks t))
+  :diminish projectile-mode
+  :pin melpa-stable)
 
 (use-package magit                      ; The best Git client out there
   :bind (:map magit-status-mode-map
               ("q" . #'mu-magit-kill-buffers))
+  :hook (magit-post-refresh . diff-hl-magit-post-refresh) ;; Refresh `diff-hl' accordingly
   :config
-  ;; Refresh `diff-hl' accordingly
-  (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
   (defun mu-magit-kill-buffers ()
     "Restore window configuration and kill all Magit buffers."
     (interactive)
@@ -772,8 +1028,8 @@ The app is chosen from your OS's preference."
 
 (use-package tramp                      ; Remote editing
   :config
-  (setq auto-save-file-name-transforms nil)
-
+  (setq auto-save-file-name-transforms nil
+        tramp-adb-connect-if-not-connected t)
   (add-to-list 'backup-directory-alist
                (cons tramp-file-name-regexp nil)))
 
@@ -785,6 +1041,8 @@ The app is chosen from your OS's preference."
 
 (use-package org                        ; Org Plus Contributions
   :ensure org-plus-contrib
+  :hook (org-mode . (lambda ()
+                      (setq-local company-backends '((company-ispell company-files company-dabbrev)))))
   :config
   (setq org-src-fontify-natively t
         org-log-done 'time
@@ -808,11 +1066,7 @@ The app is chosen from your OS's preference."
         org-lowest-priority ?C
         org-default-priority ?A)
   ;; Define TODO workflow states
-  (setq org-todo-keywords '("TODO(t)" "WAITING(w)" "|" "CANCELLED(c)" "DONE(d)"))
-
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-ispell company-files company-dabbrev))))))
+  (setq org-todo-keywords '("TODO(t)" "WAITING(w)" "|" "CANCELLED(c)" "DONE(d)")))
 
 (use-package org-capture                ; Fast note taking in Org
   :ensure org-plus-contrib
@@ -838,9 +1092,10 @@ The app is chosen from your OS's preference."
 
 (use-package org-notify
   :ensure org-plus-contrib
-  :init
-  (require 'org-notify)
-  (org-notify-start)
+  :hook (after-init . (lambda ()
+                        (require 'org-notify)
+                        (org-notify-start)))
+  :config
   (org-notify-add 'halfhour '(:time "30m"  :actions -notify/window :period "5m" :duration 60)))
 
 (use-package ox
@@ -850,46 +1105,17 @@ The app is chosen from your OS's preference."
         org-export-with-smart-quotes t))
 
 ;;; Programming utilities
-(use-package imenu
-  :ensure nil
-  :config
-  (setq imenu-auto-rescan t))
-
 (use-package python                     ; Python editing
   :bind (:map python-mode-map
               ([C-return] . jedi:goto-definition))
-  :hook (inferior-python-mode . company-mode)
+  :hook ((inferior-python-mode . company-mode)
+         (python-mode . (lambda ()
+                          (setq-local company-backends '((company-jedi)))
+                          (setq fill-column 79)))
+         (ein:connect-mode . ein:jedi-setup))
   :config
   (setq python-indent-offset 2)
-  (jedi:setup)
-  (add-hook 'ein:connect-mode-hook 'ein:jedi-setup)
-  (add-hook 'python-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-jedi)))
-              (setq fill-column 79)))) ;; PEP 8 compliant filling rules, 79 chars maximum
-
-(use-package elisp-mode                 ; Emacs Lisp editing
-  :ensure nil
-  :bind (:map emacs-lisp-mode-map
-              ([C-return] . elisp-def))
-  :interpreter ("emacs" . emacs-lisp-mode)
-  :config
-  (defconst use-package-imenu-expression
-    `("Use Package" ,(rx "(use-package" (optional "-with-elapsed-timer")
-                         symbol-end (1+ (syntax whitespace)) symbol-start
-                         (group-n 1 (1+ (or (syntax word) (syntax symbol))))
-                         symbol-end) 1)
-    "IMenu expression for `use-package' declarations.")
-
-  (defun add-use-package-to-imenu ()
-    "Add `use-package' declarations to `imenu'."
-    (add-to-list 'imenu-generic-expression
-                 use-package-imenu-expression))
-
-  (add-hook 'emacs-lisp-mode-hook
-            (lambda ()
-              (add-use-package-to-imenu)
-              (setq-local company-backends '((company-capf))))))
+  (jedi:setup))
 
 (use-package elisp-def
   :hook ((emacs-lisp-mode ielm-mode) . elisp-def-mode)
@@ -897,6 +1123,10 @@ The app is chosen from your OS's preference."
 
 (use-package cider                      ; Clojure development environment
   :after clojure-mode
+  :hook ((cider-stacktrace-mode . (lambda ()
+                                    (cider-stacktrace-cycle-cause 2 1)))
+         (cider-connected . (lambda ()
+                              (cider-repl-clear-banners))))
   :config
   (setq
    nrepl-prompt-to-kill-server-buffer-on-quit nil
@@ -906,12 +1136,6 @@ The app is chosen from your OS's preference."
    cider-cljs-lein-repl "(do (use 'figwheel-sidecar.repl-api) (start-figwheel!) (cljs-repl))"
    ;; Do not offer to open ClojureScript app in browser
    cider-offer-to-open-cljs-app-in-browser nil)
-  (add-hook 'cider-stacktrace-mode-hook
-            (lambda ()
-              (cider-stacktrace-cycle-cause 2 1)))
-  (add-hook 'cider-connected-hook
-            (lambda ()
-              (cider-repl-clear-banners)))
 
   (defvar cider-jack-in-start-time nil)
 
@@ -952,6 +1176,8 @@ The app is chosen from your OS's preference."
   :diminish cider-mode)
 
 (use-package clojure-mode               ; Major mode for Clojure files
+  :hook (clojure-mode . (lambda ()
+                          (setq-local company-backends '((company-capf)))))
   :bind (:map clojure-mode-map
               ("M-s j" . cider-jack-in)
               ("M-s J" . cider-jack-in-clojurescript))
@@ -967,22 +1193,21 @@ The app is chosen from your OS's preference."
     (ANY 2)
     (context 2))
   :config
-  (setq clojure-align-forms-automatically t)
-  (add-hook 'clojure-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-capf))))))
+  (setq clojure-align-forms-automatically t))
 
 (use-package clojure-mode-extra-font-locking ; Font-locking for Clojure mode
   :after clojure-mode)
 
-(use-package nrepl-client               ; Client for Clojure nREPL
+(use-package nrepl-client              ; Client for Clojure nREPL
   :ensure cider
   :config (setq nrepl-hide-special-buffers t))
 
-(use-package cider-repl                 ; REPL interactions with CIDER
+(use-package cider-repl            ; REPL interactions with CIDER
   :ensure cider
-  :hook ((cider-repl-mode . cider-company-enable-fuzzy-completion)
-         (cider-repl-mode . company-mode))
+  :hook (cider-repl-mode . (lambda ()
+                             (company-mode)
+                             (cider-company-enable-fuzzy-completion)
+                             (setq-local company-backends '((company-capf)))))
   :bind (:map cider-repl-mode-map
               ("C-l" . cider-repl-clear-buffer))
   :config
@@ -995,10 +1220,7 @@ The app is chosen from your OS's preference."
         cider-repl-pop-to-buffer-on-connect nil
         cider-repl-scroll-on-output nil
         cider-repl-display-in-current-window t)
-  (evil-set-initial-state 'cider-repl-mode 'insert)
-  (add-hook 'cider-repl-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-capf))))))
+  (evil-set-initial-state 'cider-repl-mode 'insert))
 
 (use-package clj-refactor               ; Refactoring utilities
   :hook (cider-mode . clj-refactor-mode)
@@ -1042,28 +1264,21 @@ The app is chosen from your OS's preference."
         idris-semantic-source-highlighting nil)
   :diminish idris-simple-indent-mode)
 
-(use-package sql                        ; SQL editing and REPL
-  :ensure nil
-  :mode ("\\.sql\\'" . sql-mode)
-  :bind (:map sql-mode-map
-         ("C-c m p" . sql-set-product)))
-
 (use-package sqlup-mode                 ; Upcase SQL keywords
   :hook sql-mode
   :diminish sqlup-mode)
 
 (use-package web-mode                   ; Major mode for editing web templates
   :mode ("\\.[sx]?html?\\'" "\\.s?css\\'" "\\.xml\\'")
+  :hook (web-mode . (lambda ()
+                      (when (string-equal "tsx" (file-name-extension buffer-file-name))
+                        (tide-setup))
+                      (when (string-equal "jsx" (file-name-extension buffer-file-name))
+                        (tide-setup))
+                      (require 'company-web-html)
+                      (setq-local company-backends '((company-web-html company-css)))))
   :config
   (set-face-background 'web-mode-current-element-highlight-face "grey40")
-  (add-hook 'web-mode-hook
-            '(lambda ()
-               (when (string-equal "tsx" (file-name-extension buffer-file-name))
-                 (tide-setup))
-               (when (string-equal "jsx" (file-name-extension buffer-file-name))
-                 (tide-setup))
-               (require 'company-web-html)
-               (setq-local company-backends '((company-web-html company-css)))))
 
   (setq web-mode-enable-auto-pairing t
         web-mode-enable-auto-closing t
@@ -1076,6 +1291,10 @@ The app is chosen from your OS's preference."
         web-mode-enable-current-column-highlight t))
 
 (use-package js2-mode                   ; Powerful JavaScript mode
+  :hook (js2-mode . (lambda ()
+                      (setq-local company-backends '((company-tern)))
+                      ;; Better Imenu in j2-mode
+                      (js2-imenu-extras-mode)))
   :config
   ;; Disable parser errors and strict warnings
   (setq js2-mode-show-parse-errors nil
@@ -1083,58 +1302,27 @@ The app is chosen from your OS's preference."
   (setq js2-basic-offset 2)
 
   ;; Try to highlight most ECMA built-ins
-  (setq js2-highlight-level 3)
-
-  (add-hook 'js2-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-tern)))
-              ;; Better Imenu in j2-mode
-              (js2-imenu-extras-mode))))
+  (setq js2-highlight-level 3))
 
 (use-package js2-refactor               ; Refactor JavaScript
   :after js2-mode
   :hook (js2-mode . js2-refactor-mode)
-  :config
-  (js2r-add-keybindings-with-prefix "C-c m r"))
+  :config (js2r-add-keybindings-with-prefix "C-c m r"))
 
 (use-package php-mode                   ; Better PHP support
+  :hook (php-mode . (lambda ()
+                      (require 'ac-php)
+                      (require 'company-php)
+                      (setq-local company-backends '((company-ac-php-backend)))))
   :bind (:map php-mode-map
               ("C-t" . ac-php-location-stack-back)
               ([C-return] . ac-php-find-symbol-at-point))
   :mode "\\.php\\'"
   :config
   (use-package ac-php)
-  (use-package company-php)
-  (add-hook 'php-mode-hook
-            (lambda ()
-              (require 'ac-php)
-              (require 'company-php)
-              (setq-local company-backends '((company-ac-php-backend))))))
+  (use-package company-php))
 
 ;;; Other languages
-(use-package sh-script                  ; Shell scripts
-  :ensure nil
-  :mode ("\\.zsh\\'" . sh-mode)
-  :config
-  ;; Use two spaces in shell scripts.
-  (setq sh-indentation 2       ; The basic indentation
-        sh-basic-offset 2)     ; The offset for nested indentation
-  (add-hook 'sh-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-shell))))))
-
-(use-package nxml-mode                  ; XML editing
-  :ensure nil
-  :config
-  ;; Complete closing tags, and insert XML declarations into empty files
-  (setq nxml-slash-auto-complete-flag t
-        nxml-auto-insert-xml-declaration-flag t
-        ;; Treat elements (with children) as sexps
-        nxml-sexp-element-flag t)
-  (add-hook 'nxml-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-nxml))))))
-
 (use-package json-mode                  ; JSON editing
   :mode "\\.json\\'")
 
@@ -1143,13 +1331,12 @@ The app is chosen from your OS's preference."
   (setq clang-format-style "LLVM"))
 
 (use-package go-mode
+  :hook (go-mode . (lambda ()
+                     (add-hook 'before-save-hook 'gofmt-before-save nil 'local)
+                     (setq-local company-backends '((company-go)))))
   :bind (:map go-mode-map
               ("C-c C-r" . go-remove-unused-imports)
-              ([C-return] . godef-jump))
-  :config
-  (add-hook 'go-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-go))))))
+              ([C-return] . godef-jump)))
 
 (use-package fennel-mode
   :bind (:map fennel-mode-map
@@ -1157,73 +1344,24 @@ The app is chosen from your OS's preference."
 
 (use-package cmake-mode
   :mode "CMakeLists\\.txt\\.cmake\\'"
-  :config
-  (add-hook 'cmake-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-cmake))))))
-
-(use-package gdb-mi
-  :ensure nil
-  :config
-  (setq
-   gdb-display-io-nopopup t
-   ;; use gdb-many-windows by default when `M-x gdb'
-   gdb-many-windows t
-   ;; Non-nil means display source file containing the main routine at startup
-   gdb-show-main t))
+  :hook (cmake-mode . (lambda ()
+                        (setq-local company-backends '((company-cmake))))))
 
 (use-package modern-cpp-font-lock
-  :config
-  (add-hook 'c++-mode-hook #'modern-c++-font-lock-mode)
+  :hook (c++-mode . modern-c++-font-lock-mode)
   :diminish modern-c++-font-lock-mode)
 
-(use-package cc-mode
-  :ensure nil
-  :bind (:map c-mode-map
-              ("C-c C-c" . projectile-compile-project)
-              ([C-M-tab] . clang-format-region)
-              ([C-return] . counsel-gtags-dwim))
-  :config
-  (setq c-basic-offset 2)
-  (add-hook 'c++-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-clang company-c-headers)))
-              (setq-local flycheck-gcc-language-standard "c++17")
-              (setq-local flycheck-clang-language-standard "c++17")))
-  (add-hook 'c-mode-hook
-            (lambda ()
-              (setq-local company-backends '((company-clang company-c-headers)))
-              (setq-local flycheck-gcc-language-standard "c11")
-              (setq-local flycheck-clang-language-standard "c11"))))
-
 (use-package tide
-  :hook (typescript-mode . tide-mode)
+  :hook (typescript-mode . (lambda ()
+                             (add-hook 'before-save-hook 'tide-format-before-save nil 'local)
+                             (tide-setup)
+                             (tide-hl-identifier-mode t)))
   :bind (:map tide-mode-map
               ([C-return] . tide-jump-to-definition))
   :config
   (setq tide-jump-to-definition-reuse-window t)
   (flycheck-add-mode 'typescript-tslint 'web-mode)
-  (add-hook 'typescript-mode-hook
-            (lambda ()
-              (tide-setup)
-              (tide-hl-identifier-mode t)))
   :diminish tide-mode)
-
-(use-package abbrev
-  :ensure nil
-  :config
-  (setq abbrev-file-name (expand-file-name ".abbrev_defs" user-emacs-directory))
-  (setq save-abbrevs 'silently)
-  (setq-default abbrev-mode t)
-  (if (file-exists-p abbrev-file-name)
-      (quietly-read-abbrev-file))
-  :diminish abbrev-mode)
-
-(use-package racket-mode                ; Racket language mode
-  :mode "\\.rkt\\'"
-  :hook (racket-repl-mode . company-mode)
-  :bind (:map racket-mode-map
-              ("M-s j" . racket-run)))
 
 (use-package realgud)                   ; Additional debug modes
 
@@ -1234,28 +1372,11 @@ The app is chosen from your OS's preference."
 (use-package pkgbuild-mode)             ; PKGBUILD files for Archlinux
 
 (use-package restclient                 ; Interactive HTTP client
-  :config
-  (add-hook 'restclient-mode-hook
-            (lambda ()
-              (setq-local company-backends '(company-restclient)))))
-
-(use-package eldoc                      ; Documentation in the echo area
-  :ensure nil
-  :hook (eval-expression-minibuffer-setup-hook . eldoc-mode)
-  :config
-  ;; Enable Eldoc for `eval-expression', too
-  (setq-default eldoc-documentation-function #'describe-char-eldoc)
-  (setq eldoc-idle-delay 0.1)  ; Show eldoc more promptly
-  ;; (add-hook 'eval-expression-minibuffer-setup-hook #'eldoc-mode)
-  :diminish eldoc-mode)
-
-(use-package etags                      ; Tag navigation
-  :ensure nil
-  :config
-  ;; Do not query before reverting TAGS tables
-  (setq tags-revert-without-query t))
+  :hook (restclient-mode . (lambda ()
+                             (setq-local company-backends '(company-restclient)))))
 
 (use-package compile                    ; Compile from Emacs
+  :hook (compilation-filter . colorize-compilation-buffer)
   :config
   (setq compilation-ask-about-save nil
         ;; Kill old compilation processes before starting new ones
@@ -1287,74 +1408,20 @@ The app is chosen from your OS's preference."
     (interactive)
     (when (eq major-mode 'compilation-mode)
       (let ((inhibit-read-only t))
-        (ansi-color-apply-on-region (point-min) (point-max)))))
-
-  (add-hook 'compilation-filter-hook
-            #'colorize-compilation-buffer))
+        (ansi-color-apply-on-region (point-min) (point-max))))))
 
 (use-package ggtags
   :config
   (setq ggtags-use-sqlite3 t))
 
-(use-package eshell                     ; Emacs command shell
-  :ensure nil
-  :bind (("M-s t" . eshell-here))
-  :config
-  (setq eshell-banner-message ""
-        eshell-destroy-buffer-when-process-dies t
-        eshell-error-if-no-glob t
-        eshell-highlight-prompt nil
-        eshell-hist-ignoredups t
-        eshell-history-size 1024
-        eshell-prefer-lisp-functions t
-        eshell-prompt-function (lambda () "$ ")
-        eshell-prompt-regexp "^$ "
-        eshell-review-quick-commands nil
-        eshell-save-history-on-exit t
-        eshell-scroll-to-bottom-on-input 'all
-        eshell-smart-space-goes-to-end t
-        eshell-where-to-jump 'begin)
-  (setq eshell-visual-commands '("top" "less" "more" "htop" "mc"))
-
-  (defun eshell/clear ()
-    "Clear the eshell buffer"
-    (interactive)
-    (let ((eshell-buffer-maximum-lines 0))
-      (eshell-truncate-buffer)))
-
-  (defun eshell/magit ()
-    "Function to open magit-status for the current directory"
-    (magit-status-internal "."))
-
-  (defun eshell-here ()
-    "Go to eshell and set current directory to the buffer's directory"
-    (interactive)
-    (let ((dir (file-name-directory (or (buffer-file-name)
-                                        default-directory))))
-      (eshell)
-      (goto-char (point-max))
-      (eshell-kill-input)
-      (eshell/pushd ".")
-      (insert (concat "cd " dir))
-      (eshell/cd dir)
-      (eshell-send-input))))
-
 (use-package esh-autosuggest
   :hook (eshell-mode . esh-autosuggest-mode))
 
-(use-package proced-mode
-  :ensure nil
-  :init
-  (setq proced-auto-update-interval 1
-        proced-auto-update-flag t
-        proced-format 'long
-        proced-sort 'pmem))
-
 (use-package undo-tree
   :config
-  (global-undo-tree-mode)
   (setq undo-tree-visualizer-timestamps t
         undo-tree-visualizer-diff t)
+  (global-undo-tree-mode)
   :diminish undo-tree-mode)
 
 (use-package counsel-gtags
@@ -1365,6 +1432,9 @@ The app is chosen from your OS's preference."
 
 (use-package counsel
   :ensure smex
+  :hook (find-file . (lambda ()
+                       (when (not (file-writable-p buffer-file-name))
+                         (find-alternate-file (concat "/sudo::" buffer-file-name)))))
   :bind (("M-s i"   . counsel-imenu)
          ("C-x C-f" . counsel-find-file)
          ("C-x C-r" . counsel-recentf)
@@ -1379,27 +1449,19 @@ The app is chosen from your OS's preference."
   :config
   (setq counsel-git-cmd "rg --files"
         counsel-rg-base-command "rg -i -M 120 --no-heading --line-number --color never %s .")
-  (defun my/find-file-hook ()
-    (when (not (file-writable-p buffer-file-name))
-      (find-alternate-file (concat "/sudo::" buffer-file-name))))
-  (add-hook 'find-file-hook 'my/find-file-hook)
   (counsel-mode)
   :diminish counsel-mode)
 
-(use-package woman
-  :ensure nil
-  :bind (("M-s m"   . woman)))
+(use-package counsel-projectile
+  ;; :after (projectile counsel)
+  :bind (:map projectile-mode-map
+              ("M-s a"   . counsel-projectile-rg)))
 
 (use-package find-file-in-project
   :after projectile
   :bind (:map projectile-mode-map
               ("M-s f"   . find-file-in-project-by-selected))
   :config (setq ffip-use-rust-fd t))
-
-(use-package counsel-projectile
-  :after (projectile counsel)
-  :bind (:map projectile-mode-map
-              ("M-s a"   . counsel-projectile-rg)))
 
 (use-package swiper
   :bind (("M-s s"   . swiper)))
@@ -1419,151 +1481,6 @@ The app is chosen from your OS's preference."
         '((t . ivy--regex-plus)))    ; allow input not in order
   (ivy-mode)
   :diminish ivy-mode)
-
-(use-package eww
-  :ensure nil
-  :init
-  (setq eww-header-line-format nil
-        browse-url-browser-function 'browse-url-xdg-open
-        shr-width 80
-        shr-use-colors nil
-        shr-use-fonts nil)
-  :config
-  (evil-set-initial-state 'eww-bookmark-mode 'motion)
-  (evil-set-initial-state 'eww-mode 'motion))
-
-(use-package calendar
-  :ensure nil
-  :config
-  (require 'calendar)
-  (setq calendar-date-style 'european
-        calendar-week-start-day 1
-        calendar-holidays nil)
-
-  (add-hook 'calendar-today-visible-hook 'calendar-mark-today))
-
-(use-package mu4e
-  :ensure nil
-  :commands mu4e
-  :config
-  (setq mu4e-maildir "~/mail"
-        mu4e-attachment-dir "~/tmp"
-        mu4e-auto-retrieve-keys t
-        mu4e-compose-complete-only-personal t
-        mu4e-compose-dont-reply-to-self t
-        mu4e-compose-format-flowed t
-        mu4e-confirm-quit nil
-        mu4e-context-policy 'pick-first
-        mu4e-get-mail-command "getmail -rgetmail_home -rgetmail_work"
-        mu4e-headers-auto-update t
-        mu4e-headers-skip-duplicates t
-        mu4e-hide-index-messages t
-        mu4e-org-contacts-file "~/files/org/contacts.org"
-        mu4e-sent-folder "/"
-        mu4e-update-interval 180
-        mu4e-user-agent-string "emacs"
-        mu4e-user-mail-address-list '("i@totravel.online" "mankaev@gmail.com")
-        mu4e-view-image-max-width 800 ; enable inline images
-        mu4e-view-show-addresses t
-        mu4e-view-show-images t)
-
-  (setq mu4e-contexts
-        `( ,(make-mu4e-context
-             :name "gmail"
-             :enter-func (lambda () (mu4e-message "Entering Gmail context"))
-             ;; we match based on the contact-fields of the message
-             :match-func (lambda (msg)
-                           (when msg
-                             (mu4e-message-contact-field-matches msg
-                                                                 :to "mankaev@gmail.com")))
-             :vars '( ( user-mail-address            . "mankaev@gmail.com")
-                      ( user-full-name               . "Ilya Mankaev")
-                      ( mu4e-compose-signature       . "Ilya Mankaev\n")
-                      ( system-name                  . "mankaev")
-                      ( mu4e-sent-messages-behavior  . delete)
-                      ( epg-user-id                  . "C71CD9843FE0986C61CC26722CBACD9B90C9D091")
-                      ( smtpmail-stream-type         . starttls)
-                      ( smtpmail-default-smtp-server . "smtp.gmail.com")
-                      ( smtpmail-smtp-server         . "smtp.gmail.com")
-                      ( smtpmail-smtp-service        . 587)))
-           ,(make-mu4e-context
-             :name "alliance"
-             :enter-func (lambda () (mu4e-message "Entering Alliance context"))
-             ;; we match based on the contact-fields of the message
-             :match-func (lambda (msg)
-                           (when msg
-                             (mu4e-message-contact-field-matches msg
-                                                                 :to "i@totravel.online")))
-             :vars '( ( user-mail-address            . "i@totravel.online")
-                      ( user-full-name               . "Ilia Mankaev")
-                      ( mu4e-compose-signature       . "Ilia Mankaev\nChief Technology Officer\nAlliance Online LLC")
-                      ( system-name                  . "totravel.online")
-                      ( mu4e-sent-messages-behavior  . sent)
-                      ( epg-user-id                  . "6589D1B2C5A8A48A78758C763BBB1BA19FB0378D")
-                      ( smtpmail-stream-type         . starttls)
-                      ( smtpmail-default-smtp-server . "smtp.yandex.com")
-                      ( smtpmail-smtp-server         . "smtp.yandex.com")
-                      ( smtpmail-smtp-service        . 587)))))
-
-  (setq mu4e-headers-fields '((:human-date . 8)
-                              (:from . 35)
-                              (:thread-subject . 80))
-        mu4e-view-fields '(:from
-                           :to
-                           :cc
-                           :bcc
-                           :date
-                           :subject
-                           :signature
-                           :attachments))
-
-  (require 'smtpmail-async)
-  (setq mail-user-agent 'mu4e-user-agent
-        read-mail-command    'mu4e
-        gnus-dired-mail-mode 'mu4e-user-agent)
-  (setq message-send-mail-function 'async-smtpmail-send-it
-        message-required-mail-headers '(From Subject Date (optional . In-Reply-To))
-        mail-specify-envelope-from t  ; Use from field to specify sender name.
-        message-kill-buffer-on-exit t
-        message-citation-line-format "On %a %d %b %Y at %R UTC, %f wrote:\n"
-        message-citation-line-function 'message-insert-formatted-citation-line
-        message-cite-reply-position 'above
-        mail-envelope-from 'header)   ; otherwise `user-mail-address' is used.
-  (setq mml2015-use 'epg
-        mml-secure-openpgp-encrypt-to-self t
-        mml-secure-openpgp-always-trust nil
-        mml-secure-cache-passphrase t
-        mml-secure-passphrase-cache-expiry '36000
-        mml-secure-openpgp-sign-with-sender t
-        mm-verify-option 'always
-        mm-decrypt-option 'always)
-
-  ;; Use Org structures and tables in message mode
-  (add-hook 'message-mode-hook
-            (lambda ()
-              (turn-on-orgtbl)
-              (turn-on-orgstruct++)))
-
-  (add-hook 'message-send-hook
-            (lambda ()
-              ;; (mml-secure-message-sign-encrypt)
-              (mml-secure-message-sign)))
-
-  (add-hook 'mu4e-compose-mode-hook
-            (lambda ()
-              (set-fill-column 65)
-              (flyspell-mode)
-              (epa-mail-mode)))
-
-  (add-hook 'mu4e-view-mode-hook 'epa-mail-mode)
-
-  (add-to-list 'mu4e-view-actions
-               '("browse mail" . mu4e-action-view-in-browser) t)
-  (add-to-list 'mu4e-headers-actions
-               '("org-contact-add" . mu4e-action-add-org-contact) t)
-  (add-to-list 'mu4e-view-actions
-               '("org-contact-add" . mu4e-action-add-org-contact) t)
-  :diminish (overwrite-mode epa-mail-mode orgtbl-mode orgstruct-mode mml-mode))
 
 (use-package mu4e-alert
   :after mu4e
@@ -1595,19 +1512,6 @@ The app is chosen from your OS's preference."
      (Kib "1024 * b" "Kilo Bit")
      (b "B / 8" "Bit")))
   :config (setq math-units-table nil))
-
-;; (use-package intero
-;;  :bind (:map intero-mode-map
-;;              ([C-return] . intero-goto-definition)
-;;              ("C-c C-c" . haskell-compile))
-;;  :hook (haskell-mode . intero-mode)
-;;  :init
-;;  (setq haskell-compile-cabal-build-alt-command
-;;          "cd %s && stack clean && stack build --ghc-options -ferror-spans"
-;;        haskell-compile-cabal-build-command
-;;          "cd %s && stack build --ghc-options -ferror-spans"
-;;        haskell-compile-command
-;;          "stack ghc -- -Wall -ferror-spans -fforce-recomp -c %s"))
 
 (provide '.emacs)
 ;;; .emacs ends here
