@@ -191,14 +191,6 @@
   :ensure nil
   :hook (after-init . server-start))
 
-(use-package mode-line
-  :ensure nil
-  :init
-  (setq-default mode-line-format
-                '("%e" mode-line-modified "   " mode-line-buffer-identification "   " mode-line-end-spaces))
-  (set-face-attribute 'mode-line nil :box nil)
-  (set-face-attribute 'mode-line-inactive nil :box nil))
-
 (use-package hideshow
   :ensure nil
   :hook (prog-mode . hs-minor-mode)
@@ -316,7 +308,7 @@
         mu4e-compose-format-flowed t
         mu4e-confirm-quit nil
         mu4e-context-policy 'pick-first
-        mu4e-get-mail-command "getmail -rgetmail_home -rgetmail_work"
+        mu4e-get-mail-command "getmail -rgetmail_home"
         mu4e-headers-auto-update t
         mu4e-headers-skip-duplicates t
         mu4e-hide-index-messages t
@@ -347,24 +339,6 @@
                       ( smtpmail-stream-type         . starttls)
                       ( smtpmail-default-smtp-server . "smtp.gmail.com")
                       ( smtpmail-smtp-server         . "smtp.gmail.com")
-                      ( smtpmail-smtp-service        . 587)))
-           ,(make-mu4e-context
-             :name "alliance"
-             :enter-func (lambda () (mu4e-message "Entering Alliance context"))
-             ;; we match based on the contact-fields of the message
-             :match-func (lambda (msg)
-                           (when msg
-                             (mu4e-message-contact-field-matches msg
-                                                                 :to "i@totravel.online")))
-             :vars '( ( user-mail-address            . "i@totravel.online")
-                      ( user-full-name               . "Ilia Mankaev")
-                      ( mu4e-compose-signature       . "Ilia Mankaev\nChief Technology Officer\nAlliance Online LLC")
-                      ( system-name                  . "totravel.online")
-                      ( mu4e-sent-messages-behavior  . sent)
-                      ( epg-user-id                  . "6589D1B2C5A8A48A78758C763BBB1BA19FB0378D")
-                      ( smtpmail-stream-type         . starttls)
-                      ( smtpmail-default-smtp-server . "smtp.yandex.com")
-                      ( smtpmail-smtp-server         . "smtp.yandex.com")
                       ( smtpmail-smtp-service        . 587)))))
 
   (setq mu4e-headers-fields '((:human-date . 8)
@@ -387,7 +361,7 @@
         message-required-mail-headers '(From Subject Date (optional . In-Reply-To))
         mail-specify-envelope-from t ; Use from field to specify sender name.
         message-kill-buffer-on-exit t
-        message-citation-line-format "On %a %d %b %Y at %R UTC, %f wrote:\n"
+        message-citation-line-format "On %a %d %b %Y at %R, %f wrote:\n"
         message-citation-line-function 'message-insert-formatted-citation-line
         message-cite-reply-position 'above
         mail-envelope-from 'header) ; otherwise `user-mail-address' is used.
@@ -450,6 +424,9 @@
       (insert (concat "cd " dir))
       (eshell/cd dir)
       (eshell-send-input))))
+
+(use-package esh-autosuggest
+  :hook (eshell-mode . esh-autosuggest-mode))
 
 (use-package eldoc                      ; Documentation in the echo area
   :ensure nil
@@ -670,7 +647,9 @@ The app is chosen from your OS's preference."
 
 (use-package racket-mode                ; Racket language mode
   :mode "\\.rkt\\'"
-  :hook (racket-repl-mode . company-mode)
+  :hook ((racket-repl-mode . company-mode)
+         (racket-mode . (lambda ()
+                          (setq-local company-backends '((company-capf))))))
   :bind (:map racket-mode-map
               ("M-s j" . racket-run)))
 
@@ -702,7 +681,7 @@ The app is chosen from your OS's preference."
          :map evil-motion-state-map
               ([escape] . evil-normal-state))
   :init
-  (setq evil-want-integration nil
+  (setq evil-want-keybinding nil
         evil-default-cursor t           ; Do not overwrite cursor colour
         evil-cross-lines t
         evil-move-beyond-eol t
@@ -727,6 +706,14 @@ The app is chosen from your OS's preference."
   :init
   (setq evil-collection-company-use-tng t)
   (evil-collection-init))
+
+(use-package doom-modeline
+  :init
+  (setq doom-modeline-height 35
+        doom-modeline-bar-width 10)
+  (set-face-attribute 'mode-line nil :box nil)
+  (set-face-attribute 'mode-line-inactive nil :box nil)
+  (doom-modeline-init)) 
 
 (use-package page-break-lines           ; Better looking break lines
   :config (global-page-break-lines-mode)
@@ -755,6 +742,8 @@ The app is chosen from your OS's preference."
            clojure-mode
            cider-repl-mode
            eshell-mode
+           racket-mode
+           racket-repl-mode
            inferior-lisp-mode
            inferior-emacs-lisp-mode) . smartparens-strict-mode)
          (prog-mode . smartparens-mode))
@@ -871,10 +860,9 @@ The app is chosen from your OS's preference."
 
 (use-package bookmark                   ; Bookmarks to files and directories
   :config
-  (setq bookmark-completion-ignore-case nil)
-  (bookmark-maybe-load-default-file))
+  (setq bookmark-completion-ignore-case nil))
+  ;;(bookmark-maybe-load-default-file))
 
-;;; Syntax checking
 (use-package flycheck                   ; On-the-fly syntax checker
   :init
   (setq flycheck-standard-error-navigation nil
@@ -893,14 +881,6 @@ The app is chosen from your OS's preference."
   :mode "\\.md\\'"
   :config
   (setq markdown-fontify-code-blocks-natively t))
-
-(use-package dired-ranger
-  :bind (:map dired-mode-map
-              ("W" . dired-ranger-copy)
-              ("X" . dired-ranger-move)
-              ("Y" . dired-ranger-paste)))
-
-(use-package dired-collapse)
 
 (use-package dired-imenu)
 
@@ -939,17 +919,15 @@ The app is chosen from your OS's preference."
 (use-package company-restclient         ; Company support for restclient
   :after company)
 
-(use-package company-shell              ; Company support for shell functions
-  :after company)
-
 (use-package ispell                     ; Word correction
   :config
-  (setq ispell-program-name (executable-find "hunspell")
-        ispell-really-hunspell t
+  (setq ispell-really-hunspell t
+        ispell-program-name (executable-find "hunspell")
         ispell-check-comments  t
-        ispell-dictionary "en_GB,ru_RU")
-  (ispell-set-spellchecker-params)
-  (ispell-hunspell-add-multi-dic "en_GB,ru_RU"))
+        ispell-dictionary "gbru"
+        ispell-local-dictionary-alist
+        '(("gbru" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_GB,ru_RU") nil utf-8)))
+  (setq ispell-hunspell-dictionary-alist ispell-local-dictionary-alist))
 
 (use-package flyspell                   ; Spell checking on-the-fly
   :hook ((text-mode . flyspell-mode)
@@ -985,16 +963,8 @@ The app is chosen from your OS's preference."
   :pin melpa-stable)
 
 (use-package magit                      ; The best Git client out there
-  :bind (:map magit-status-mode-map
-              ("q" . #'mu-magit-kill-buffers))
   :hook (magit-post-refresh . diff-hl-magit-post-refresh) ;; Refresh `diff-hl' accordingly
   :config
-  (defun mu-magit-kill-buffers ()
-    "Restore window configuration and kill all Magit buffers."
-    (interactive)
-    (let ((buffers (magit-mode-get-buffers)))
-      (magit-restore-window-configuration)
-      (mapc #'kill-buffer buffers)))
   (setq magit-save-repository-buffers 'dontask
         magit-completing-read-function 'ivy-completing-read
         magit-refs-show-commit-count 'all
@@ -1009,7 +979,18 @@ The app is chosen from your OS's preference."
              magit-wip-before-change-mode))
 
 (use-package evil-magit
-  :after magit
+  :after (evil magit)
+  :bind (:map magit-diff-mode-map
+              ("q" . #'mu-magit-kill-buffers)
+         :map magit-popup-mode-map
+              ("q" . #'mu-magit-kill-buffers))
+  :config
+  (defun mu-magit-kill-buffers ()
+    "Restore window configuration and kill all Magit buffers."
+    (interactive)
+    (let ((buffers (magit-mode-get-buffers)))
+      (magit-restore-window-configuration)
+      (mapc #'kill-buffer buffers)))
   :init (evil-magit-init))
 
 (use-package git-commit                 ; Git commit message mode
@@ -1029,6 +1010,7 @@ The app is chosen from your OS's preference."
 (use-package tramp                      ; Remote editing
   :config
   (setq auto-save-file-name-transforms nil
+        tramp-default-method "ssh"
         tramp-adb-connect-if-not-connected t)
   (add-to-list 'backup-directory-alist
                (cons tramp-file-name-regexp nil)))
@@ -1044,6 +1026,10 @@ The app is chosen from your OS's preference."
   :hook (org-mode . (lambda ()
                       (setq-local company-backends '((company-ispell company-files company-dabbrev)))))
   :config
+  (org-babel-do-load-languages
+    'org-babel-load-languages
+    '((shell . t)
+      (emacs-lisp . nil)))
   (setq org-src-fontify-natively t
         org-log-done 'time
         org-hide-emphasis-markers t
@@ -1104,6 +1090,9 @@ The app is chosen from your OS's preference."
   (setq org-export-with-timestamps nil
         org-export-with-smart-quotes t))
 
+(use-package ox-hugo
+  :after ox)
+  
 ;;; Programming utilities
 (use-package python                     ; Python editing
   :bind (:map python-mode-map
@@ -1160,8 +1149,7 @@ The app is chosen from your OS's preference."
   :ensure cider
   :hook (cider-mode . cider-company-enable-fuzzy-completion)
   :bind (:map cider-mode-map
-              ("M-s r" . cider-refresh)
-              ("M-s h" . cider-doc)
+              ("M-s r" . cider-ns-reload)
               ([C-return] . cider-find-var))
   :config
   (evil-set-initial-state 'cider-popup-buffer-mode 'motion)
@@ -1242,6 +1230,8 @@ The app is chosen from your OS's preference."
 
 (use-package clojure-snippets           ; Yasnippets for Clojure
   :after (yasnippet clojure-mode))
+
+(use-package hy-mode)                   ; Hy language mode
 
 (use-package yasnippet                  ; Snippets
   :hook (prog-mode . yas-minor-mode)
@@ -1414,9 +1404,6 @@ The app is chosen from your OS's preference."
   :config
   (setq ggtags-use-sqlite3 t))
 
-(use-package esh-autosuggest
-  :hook (eshell-mode . esh-autosuggest-mode))
-
 (use-package undo-tree
   :config
   (setq undo-tree-visualizer-timestamps t
@@ -1453,7 +1440,7 @@ The app is chosen from your OS's preference."
   :diminish counsel-mode)
 
 (use-package counsel-projectile
-  ;; :after (projectile counsel)
+  :after (projectile counsel)
   :bind (:map projectile-mode-map
               ("M-s a"   . counsel-projectile-rg)))
 
@@ -1489,12 +1476,6 @@ The app is chosen from your OS's preference."
   (mu4e-alert-set-default-style 'libnotify)
   (mu4e-alert-enable-notifications)
   (mu4e-alert-enable-mode-line-display))
-
-(use-package google-translate
-  :init
-  (setq google-translate-default-target-language "ru"
-        google-translate-default-source-language "en"
-        google-translate-output-destination 'echo-area))
 
 (use-package pdf-tools
   :magic ("%PDF" . pdf-view-mode)

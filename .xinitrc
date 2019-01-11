@@ -1,4 +1,4 @@
-export PATH=/usr/lib/ccache/bin:$HOME/.local/bin:$HOME/bin:/usr/bin/core_perl:/usr/bin/site_perl:/usr/bin/vendor_perl:$HOME/.gem/ruby/2.3.0/bin:$HOME/.pear/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+export PATH=/usr/lib/ccache/bin:$HOME/.luarocks/bin:$HOME/.cargo/bin:$HOME/.local/bin:$HOME/bin:/usr/bin/core_perl:/usr/bin/site_perl:/usr/bin/vendor_perl:$HOME/.gem/ruby/2.3.0/bin:$HOME/.pear/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 export GTAGSFORCECPP=true
 
@@ -19,15 +19,16 @@ export QEMU_ALSA_DAC_PERIOD_SIZE=170
 
 export _JAVA_AWT_WM_NONREPARENTING=1
 
-#export GDK_BACKEND=wayland
-#export SDL_VIDEODRIVER=wayland
-#export CLUTTER_BACKEND=wayland
-#export QT_QPA_PLATFORM=wayland-egl
+# export GDK_BACKEND=wayland
+# export SDL_VIDEODRIVER=wayland
+# export CLUTTER_BACKEND=wayland
+# export QT_QPA_PLATFORM=wayland-egl
+# export QT_QPA_PLATFORM=wayland
 export QT_DISABLE_WINDOWDECORATION=1
 export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-#export ECORE_EVAS_ENGINE=wayland_egl
-#export ELM_ENGINE=wayland_egl
-#export XDG_SESSION_TYPE=wayland
+# export ECORE_EVAS_ENGINE=wayland_egl
+# export ELM_ENGINE=wayland_egl
+# export XDG_SESSION_TYPE=wayland
 export XKB_DEFAULT_LAYOUT=us,ru
 export XKB_DEFAULT_OPTIONS=grp:shifts_toggle,
 
@@ -39,7 +40,6 @@ setxkbmap -layout "us,ru" -option "" && setxkbmap -option grp:shifts_toggle
 display -window root xc:'#2B2B2B'
 
 termite &
-firefox &
-telegram-desktop &
+/home/halapenio/bin/firefox &
 emacs &
 i3
