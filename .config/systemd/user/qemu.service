@@ -3,7 +3,11 @@ Description=QEMU virtual machine
 
 [Service]
 Type=forking
-ExecStart=/usr/bin/env qemu-system-x86_64 -daemonize -enable-kvm -cpu host -name w7 -rtc base=localtime,clock=host,driftfix=slew -m 2G -drive file=%h/w7.raw,format=raw,if=none,aio=native,cache=none,id=drive-temp0 -device virtio-blk-pci,scsi=off,drive=drive-temp0,id=virtio-disk0,disable-legacy=on,disable-modern=off -device virtio-net-pci,netdev=mynet0,disable-legacy=on,disable-modern=off -netdev user,id=mynet0,hostfwd=tcp::3389-:3389 -monitor telnet:localhost:7100,server,nowait,nodelay -nodefaults -nographic
+
+ExecStart=/usr/bin/env qemu-system-x86_64 -daemonize -enable-kvm -machine q35,accel=kvm -device intel-iommu -cpu host -name centos -rtc base=localtime,clock=host,driftfix=slew -m 256M -drive file=%h/centos7.vmdk,format=vmdk,if=none,aio=native,cache=none,id=drive-temp0 -device virtio-blk-pci,scsi=off,drive=drive-temp0,id=virtio-disk0,disable-legacy=on,disable-modern=off -device virtio-net-pci,netdev=mynet0 -netdev user,id=mynet0,hostfwd=tcp::3301-:3301,hostfwd=tcp::3302-:3302,hostfwd=tcp::2222-:22 -serial telnet:localhost:7000,server,nowait,nodelay -monitor telnet:localhost:7100,server,nowait,nodelay -nodefaults -nographic
+ExecStop=/bin/sh -c "echo 'system_powerdown' | nc localhost 7100"
+TimeoutStopSec=10
+KillMode=none
 
 [Install]
 WantedBy=default.target

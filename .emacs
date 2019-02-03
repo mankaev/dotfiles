@@ -51,6 +51,8 @@
 (setq nsm-save-host-names t)
 (setq tls-program '("gnutls-cli -p %p --dh-bits=2048 --ocsp --x509cafile=%t --priority='SECURE192:+SECURE128:-VERS-ALL:+VERS-TLS1.2:%%PROFILE_MEDIUM' %h" "openssl s_client -connect %h:%p -CAfile %t -no_ssl2 -no_ssl3 -ign_eof"))
 
+(setq auth-sources '("~/.authinfo.gpg" "~/.netrc"))
+
 ;; This makes long-line buffers usable
 (setq-default bidi-display-reordering nil)
 
@@ -200,6 +202,10 @@
   :ensure nil
   :hook (prog-mode . hl-line-mode))
 
+(use-package hexl-mode
+  :ensure nil
+  :magic ("ELF" . hexl-mode))
+
 (use-package text-mode
   :ensure nil
   :hook (text-mode . auto-fill-mode)
@@ -316,7 +322,7 @@
         mu4e-sent-folder "/"
         mu4e-update-interval 180
         mu4e-user-agent-string "emacs"
-        mu4e-user-mail-address-list '("i@totravel.online" "mankaev@gmail.com")
+        mu4e-user-mail-address-list '("mankaev@gmail.com")
         mu4e-view-image-max-width 800   ; enable inline images
         mu4e-view-show-addresses t
         mu4e-view-show-images t)
@@ -400,7 +406,7 @@
         eshell-scroll-to-bottom-on-input 'all
         eshell-smart-space-goes-to-end t
         eshell-where-to-jump 'begin)
-  (setq eshell-visual-commands '("top" "less" "more" "htop" "mc"))
+  (setq eshell-visual-commands '("less" "more" "htop" "mc"))
 
   (defun eshell/clear ()
     "Clear the eshell buffer"
@@ -647,7 +653,9 @@ The app is chosen from your OS's preference."
 
 (use-package racket-mode                ; Racket language mode
   :mode "\\.rkt\\'"
-  :hook ((racket-repl-mode . company-mode)
+  :hook ((racket-repl-mode . (lambda ()
+                               (setq-local company-backends '((company-capf)))
+                               (company-mode)))
          (racket-mode . (lambda ()
                           (setq-local company-backends '((company-capf))))))
   :bind (:map racket-mode-map
@@ -818,7 +826,7 @@ The app is chosen from your OS's preference."
         savehist-save-minibuffer-history t
         savehist-additional-variables '(kill-ring search-ring regexp-search-ring)
         savehist-autosave-interval 180)
-  :config (savehist-mode t))
+  (savehist-mode t))
 
 (use-package eyebrowse                  ; Easy workspaces creation and switching
   :init
@@ -854,7 +862,9 @@ The app is chosen from your OS's preference."
 
 (use-package super-save                 ; Autosave buffers when they lose focus
   :config
-  (setq super-save-auto-save-when-idle t)
+  (setq super-save-auto-save-when-idle t
+        super-save-remote-files nil)
+  (setq auto-save-default nil)
   (super-save-mode)
   :diminish super-save-mode)
 
@@ -920,14 +930,14 @@ The app is chosen from your OS's preference."
   :after company)
 
 (use-package ispell                     ; Word correction
-  :config
-  (setq ispell-really-hunspell t
-        ispell-program-name (executable-find "hunspell")
-        ispell-check-comments  t
-        ispell-dictionary "gbru"
-        ispell-local-dictionary-alist
-        '(("gbru" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_GB,ru_RU") nil utf-8)))
-  (setq ispell-hunspell-dictionary-alist ispell-local-dictionary-alist))
+ :config
+ (setq ispell-really-hunspell t
+       ispell-program-name (executable-find "hunspell")
+       ispell-check-comments  t
+       ispell-dictionary "gbru"
+       ispell-local-dictionary-alist
+       '(("gbru" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_GB,ru_RU") nil utf-8))
+       ispell-hunspell-dictionary-alist ispell-local-dictionary-alist))
 
 (use-package flyspell                   ; Spell checking on-the-fly
   :hook ((text-mode . flyspell-mode)
@@ -953,8 +963,8 @@ The app is chosen from your OS's preference."
   (setq projectile-enable-caching t
         projectile-completion-system 'ivy
         projectile-globally-ignored-files '("TAGS" "GPATH" "GRTAGS" "GTAGS" "ID")
-        projectile-find-dir-includes-top-level t
-        projectile-mode-line '(:eval (format " Proj[%s]" (projectile-project-name))))
+        projectile-find-dir-includes-top-level t)
+        ;; projectile-mode-line '(:eval (format " Proj[%s]" (projectile-project-name))))
 
   (projectile-mode)
   ;; Remove dead projects when Emacs is idle
@@ -1024,6 +1034,7 @@ The app is chosen from your OS's preference."
 (use-package org                        ; Org Plus Contributions
   :ensure org-plus-contrib
   :hook (org-mode . (lambda ()
+                      (org-hide-block-all)
                       (setq-local company-backends '((company-ispell company-files company-dabbrev)))))
   :config
   (org-babel-do-load-languages
@@ -1155,7 +1166,7 @@ The app is chosen from your OS's preference."
   (evil-set-initial-state 'cider-popup-buffer-mode 'motion)
   (evil-set-initial-state 'cider-browse-ns-mode 'motion)
   (evil-set-initial-state 'cider--debug-mode 'emacs)
-  (evil-set-initial-state 'cider-docview-mode 'emacs)
+  (evil-set-initial-state 'cider-docview-mode 'motion)
   (evil-set-initial-state 'cider-stacktrace-mode 'motion)
   (evil-set-initial-state 'cider-repl-history-mode 'motion)
   (setq cider-show-eval-spinner nil
@@ -1232,6 +1243,16 @@ The app is chosen from your OS's preference."
   :after (yasnippet clojure-mode))
 
 (use-package hy-mode)                   ; Hy language mode
+
+(use-package lsp-mode)
+
+(use-package company-lsp)
+
+(use-package lsp-ui)
+
+(use-package lsp-java
+  :after lsp
+  :hook (java-mode . lsp))
 
 (use-package yasnippet                  ; Snippets
   :hook (prog-mode . yas-minor-mode)
