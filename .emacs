@@ -14,7 +14,8 @@
 
 ;;; Package setup
 (require 'package)
-(setq package-enable-at-startup nil)
+(setq package-enable-at-startup nil
+      package--init-file-ensured t)
 (setq package-archives '(("gnu"          . "https://elpa.gnu.org/packages/")
                          ("melpa"        . "https://melpa.org/packages/")
                          ("melpa-stable" . "https://stable.melpa.org/packages/")
@@ -28,11 +29,15 @@
 ;; Allow more than 800Kb cache during init
 (setq gc-cons-threshold 50000000)
 
+(defvar my-file-name-handler-alist file-name-handler-alist)
+(setq file-name-handler-alist nil)
+
 (add-hook 'emacs-startup-hook
           (lambda ()
             ;; Reset threshold to its default after Emacs has startup, because a large
             ;; GC threshold equates to longer delays whenever GC happens
-            (setq gc-cons-threshold 800000)
+            (setq gc-cons-threshold 800000
+                  file-name-handler-alist my-file-name-handler-alist)
             (kill-buffer "*scratch*")))
 
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
@@ -47,7 +52,7 @@
 (setq tls-checktrust t)
 (setq gnutls-verify-error t)
 (setq gnutls-min-prime-bits 2048)
-(setq network-security-level 'high)
+(setq network-security-level 'medium)
 (setq nsm-save-host-names t)
 (setq tls-program '("gnutls-cli -p %p --dh-bits=2048 --ocsp --x509cafile=%t --priority='SECURE192:+SECURE128:-VERS-ALL:+VERS-TLS1.2:%%PROFILE_MEDIUM' %h" "openssl s_client -connect %h:%p -CAfile %t -no_ssl2 -no_ssl3 -ign_eof"))
 
@@ -286,17 +291,15 @@
   :hook (sh-mode . (lambda ()
                      (setq-local company-backends '((company-shell)))))
   :mode ("\\.zsh\\'" . sh-mode)
-  :config
-  ;; Use two spaces in shell scripts.
-  (setq sh-indentation 2                ; The basic indentation
-        sh-basic-offset 2))             ; The offset for nested indentation
+  :bind (("M-s j"   . eshell-here))
+  :config (setq sh-basic-offset 2))     ; The offset for nested indentation
 
 (use-package mu4e
   :ensure nil
   :commands mu4e
   :hook ((message-mode . (lambda () ;; Use Org structures and tables in message mode
                            (turn-on-orgtbl)
-                           (turn-on-orgstruct++)))
+                           (orgalist-mode)))
          (message-send . (lambda ()
                            ;; (mml-secure-message-sign-encrypt)
                            (mml-secure-message-sign)))
@@ -314,7 +317,7 @@
         mu4e-compose-format-flowed t
         mu4e-confirm-quit nil
         mu4e-context-policy 'pick-first
-        mu4e-get-mail-command "getmail -rgetmail_home"
+        mu4e-get-mail-command "getmail -rgetmail_work"
         mu4e-headers-auto-update t
         mu4e-headers-skip-duplicates t
         mu4e-hide-index-messages t
@@ -322,10 +325,12 @@
         mu4e-sent-folder "/"
         mu4e-update-interval 180
         mu4e-user-agent-string "emacs"
-        mu4e-user-mail-address-list '("mankaev@gmail.com")
+        mu4e-headers-include-related nil
+        mu4e-user-mail-address-list '("mankaev@gmail.com" "mankaev.i.m@sberbank.ru")
         mu4e-view-image-max-width 800   ; enable inline images
         mu4e-view-show-addresses t
-        mu4e-view-show-images t)
+        mu4e-view-show-images nil
+        mu4e-completing-read-function 'ivy-completing-read)
 
   (setq mu4e-contexts
         `( ,(make-mu4e-context
@@ -345,7 +350,35 @@
                       ( smtpmail-stream-type         . starttls)
                       ( smtpmail-default-smtp-server . "smtp.gmail.com")
                       ( smtpmail-smtp-server         . "smtp.gmail.com")
-                      ( smtpmail-smtp-service        . 587)))))
+                      ( smtpmail-smtp-service        . 587)))
+           ,(make-mu4e-context
+             :name "sber"
+             :enter-func (lambda () (mu4e-message "Entering Sberbank context"))
+             ;; we match based on the contact-fields of the message
+             :match-func (lambda (msg)
+                           (when msg
+                             (mu4e-message-contact-field-matches msg
+                                                                 :to "mankaev.i.m@sberbank.ru")))
+             :vars '( ( user-mail-address            . "mankaev.i.m@sberbank.ru")
+                      ( user-full-name               . "Манкаев Илья Михайлович")
+                      ( mu4e-compose-signature       . (concat
+                                                        "С уважением,\n"
+                                                        "Манкаев Илья Михайлович\n"
+                                                        "Руководитель направления\n"
+                                                        "ПАО Сбербанк (ЦА)\n"
+                                                        "Блок \"Технологии\"\n"
+                                                        "Департамент ИТ блока \"Сервисы\" и безопасности\n"
+                                                        "Управление развития платформенных сервисов кибербезопасности\n"
+                                                        "Группа разработки\n\n"
+                                                        "Вн.тел.: 8-557-71013.\n"
+                                                        "Россия, Москва, Варшавское шоссе 25а строение 6\n"))
+                      ( system-name                  . "mankaev")
+                      ( mu4e-sent-messages-behavior  . sent)
+                      ( epg-user-id                  . "9D9F26BEE01F94A1A78F079A61E58E5920A55728")
+                      ( smtpmail-stream-type         . plain)
+                      ( smtpmail-default-smtp-server . "127.0.0.1")
+                      ( smtpmail-smtp-server         . "127.0.0.1")
+                      ( smtpmail-smtp-service        . 1025)))))
 
   (setq mu4e-headers-fields '((:human-date . 8)
                               (:from . 35)
@@ -359,6 +392,13 @@
                            :signature
                            :attachments))
 
+  (setq mu4e-bookmarks
+        `(("flag:unread AND NOT flag:trashed" "Unread messages" ?u)
+          ("date:today..now" "Today's messages" ?t)
+          ("date:7d..now" "Last 7 days" ?w)
+          ("mime:image/*" "Messages with images" ?p)
+          ("maildir:/trash" "Trash" ?s)
+          ("maildir:/drafts" "Drafts" ?d)))
   (require 'smtpmail-async)
   (setq mail-user-agent 'mu4e-user-agent
         read-mail-command    'mu4e
@@ -386,11 +426,14 @@
                '("org-contact-add" . mu4e-action-add-org-contact) t)
   (add-to-list 'mu4e-view-actions
                '("org-contact-add" . mu4e-action-add-org-contact) t)
-  :diminish (overwrite-mode epa-mail-mode orgtbl-mode orgstruct-mode mml-mode))
+  :diminish (overwrite-mode epa-mail-mode orgtbl-mode orgalist-mode mml-mode))
 
 (use-package eshell                     ; Emacs command shell
   :ensure nil
-  :bind (("M-s t" . eshell-here))
+  :bind (("M-s t"   . eshell-here))
+  :hook (eshell-mode . (lambda () ;; Hack to define key in eshell-mode
+                         (define-key eshell-mode-map (kbd "M-s") nil)
+                         (define-key eshell-mode-map (kbd "M-s t") 'eshell-here)))
   :config
   (setq eshell-banner-message ""
         eshell-destroy-buffer-when-process-dies t
@@ -401,11 +444,8 @@
         eshell-prefer-lisp-functions t
         eshell-prompt-function (lambda () "$ ")
         eshell-prompt-regexp "^$ "
-        eshell-review-quick-commands nil
         eshell-save-history-on-exit t
-        eshell-scroll-to-bottom-on-input 'all
-        eshell-smart-space-goes-to-end t
-        eshell-where-to-jump 'begin)
+        eshell-scroll-to-bottom-on-input 'all)
   (setq eshell-visual-commands '("less" "more" "htop" "mc"))
 
   (defun eshell/clear ()
@@ -421,15 +461,33 @@
   (defun eshell-here ()
     "Go to eshell and set current directory to the buffer's directory"
     (interactive)
-    (let ((dir (file-name-directory (or (buffer-file-name)
-                                        default-directory))))
-      (eshell)
-      (goto-char (point-max))
-      (eshell-kill-input)
-      (eshell/pushd ".")
-      (insert (concat "cd " dir))
-      (eshell/cd dir)
-      (eshell-send-input))))
+    (let* ((dir (file-name-directory (or (buffer-file-name)
+                                         default-directory)))
+           (height 20)
+           (target-buf (get-buffer-create "*eshell*"))
+           (target-window (get-buffer-window target-buf)))
+      (if target-window    ;hide window if target buffer is shown
+          (if (one-window-p)
+              (quit-window)
+            (delete-window target-window))
+        (progn
+          (split-window-vertically (- height))
+          (other-window 1)
+          (eshell)
+          (goto-char (point-max))
+          (eshell-kill-input)
+          (eshell/pushd ".")
+          (insert (concat "cd " dir))
+          (eshell/cd dir)
+          (eshell-send-input))))))
+
+(use-package em-smart
+  :ensure nil
+  :hook (after-init . eshell-smart-initialize)
+  :config
+  (setq eshell-where-to-jump 'begin
+        eshell-review-quick-commands nil
+        eshell-smart-space-goes-to-end t))
 
 (use-package esh-autosuggest
   :hook (eshell-mode . esh-autosuggest-mode))
@@ -579,7 +637,8 @@
                              (add-use-package-to-imenu)
                              (setq-local company-backends '((company-capf)))))
   :bind (:map emacs-lisp-mode-map
-              ([C-return] . elisp-def))
+              ([C-return] . elisp-def)
+              ("M-s j"    . ielm))
   :interpreter ("emacs" . emacs-lisp-mode)
   :config
   (defconst use-package-imenu-expression
@@ -602,6 +661,7 @@
   (setq vc-follow-symlinks t))
 
 (use-package dired                      ; File manager
+  :after evil
   :ensure nil
   :bind (:map dired-mode-map
               ([return]   . dired-find-alternate-file)
@@ -632,6 +692,7 @@ The app is chosen from your OS's preference."
         dired-recursive-deletes 'top          ; Delete dirs recursively
         ;; -F marks links with @
         dired-ls-F-marks-symlinks t)
+  (dired-async-mode t)
   (evil-set-initial-state 'image-mode 'emacs))
 
 (use-package uniquify                   ; Unique buffer names
@@ -661,13 +722,14 @@ The app is chosen from your OS's preference."
   :bind (:map racket-mode-map
               ("M-s j" . racket-run)))
 
-(use-package auto-compile
+(use-package auto-package-update
   :config
-  (setq auto-compile-display-buffer nil)
-  (auto-compile-on-load-mode)
-  (auto-compile-on-save-mode))
+  (setq auto-package-update-delete-old-versions t
+        auto-package-update-hide-results t)
+  (auto-package-update-maybe))
 
 (use-package evil
+  :hook (after-init . evil-mode)
   :bind (:map evil-normal-state-map
               ("S-SPC"  . avy-goto-char)
               ("SPC"    . avy-goto-word-1)
@@ -693,10 +755,9 @@ The app is chosen from your OS's preference."
         evil-default-cursor t           ; Do not overwrite cursor colour
         evil-cross-lines t
         evil-move-beyond-eol t
-        evil-want-fine-undo t)
-  (evil-mode 1)
-  (evil-set-initial-state 'Info-mode 'motion)
-  (evil-set-initial-state 'help-mode 'motion))
+        evil-want-fine-undo t))
+  ;;(evil-set-initial-state 'Info-mode 'motion)
+  ;;(evil-set-initial-state 'help-mode 'motion))
 
 (use-package evil-ediff
   :after evil)
@@ -715,13 +776,21 @@ The app is chosen from your OS's preference."
   (setq evil-collection-company-use-tng t)
   (evil-collection-init))
 
+(use-package evil-multiedit
+  :after evil
+  :init (require 'evil-multiedit)
+  :config (evil-multiedit-default-keybinds))
+
 (use-package doom-modeline
+  :hook (after-init . doom-modeline-mode)
   :init
-  (setq doom-modeline-height 35
-        doom-modeline-bar-width 10)
+  (setq doom-modeline-buffer-file-name-style 'relative-from-project
+        doom-modeline-height 35
+        doom-modeline-bar-width 10
+        doom-modeline-icon nil
+        doom-modeline-major-mode-icon nil)
   (set-face-attribute 'mode-line nil :box nil)
-  (set-face-attribute 'mode-line-inactive nil :box nil)
-  (doom-modeline-init)) 
+  (set-face-attribute 'mode-line-inactive nil :box nil))
 
 (use-package page-break-lines           ; Better looking break lines
   :config (global-page-break-lines-mode)
@@ -805,7 +874,8 @@ The app is chosen from your OS's preference."
   (sp-local-pair 'org-mode "_" "_" :unless '(sp-point-after-word-p) :wrap "C-_")
   (sp-local-pair 'org-mode "/" "/" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC")))
   (sp-local-pair 'org-mode "~" "~" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC")))
-  (sp-local-pair 'org-mode "=" "=" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC"))))
+  (sp-local-pair 'org-mode "=" "=" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC")))
+  (setq sp-ignore-modes-list (delete 'minibuffer-inactive-mode sp-ignore-modes-list)))
 
 (use-package diff-hl                    ; Show changes in fringe
   :hook (prog-mode . (lambda ()
@@ -820,13 +890,13 @@ The app is chosen from your OS's preference."
   :config (global-hi-lock-mode))
 
 (use-package savehist                   ; Save minibuffer history
+  :hook (after-init . (lambda () (savehist-mode t)))
   :init
   (setq history-length 1000             ; Store more history
         history-delete-duplicates t
         savehist-save-minibuffer-history t
         savehist-additional-variables '(kill-ring search-ring regexp-search-ring)
-        savehist-autosave-interval 180)
-  (savehist-mode t))
+        savehist-autosave-interval 180))
 
 (use-package eyebrowse                  ; Easy workspaces creation and switching
   :init
@@ -1034,14 +1104,15 @@ The app is chosen from your OS's preference."
 (use-package org                        ; Org Plus Contributions
   :ensure org-plus-contrib
   :hook (org-mode . (lambda ()
-                      (org-hide-block-all)
                       (setq-local company-backends '((company-ispell company-files company-dabbrev)))))
   :config
   (org-babel-do-load-languages
     'org-babel-load-languages
     '((shell . t)
-      (emacs-lisp . nil)))
-  (setq org-src-fontify-natively t
+      (clojure . t)
+      (emacs-lisp . t)))
+  (setq org-babel-clojure-backend 'cider
+        org-src-fontify-natively t
         org-log-done 'time
         org-hide-emphasis-markers t
         org-return-follows-link t       ; Follow links by pressing ENTER on them
@@ -1054,10 +1125,11 @@ The app is chosen from your OS's preference."
         org-agenda-window-setup 'current-window
         ;; Define Agenda files
         org-agenda-files '("~/files/org/todo.org"
-                           "~/files/org/tasks.org"
+                           "~/files/org/work.org"
                            "~/files/org/notes.org")
         org-confirm-babel-evaluate nil
         org-src-tab-acts-natively t
+        org-src-preserve-indentation t
         org-html-inline-images t)
   (setq org-highest-priority ?A
         org-lowest-priority ?C
@@ -1067,18 +1139,23 @@ The app is chosen from your OS's preference."
 
 (use-package org-capture                ; Fast note taking in Org
   :ensure org-plus-contrib
+  :hook (after-init . (lambda () (require 'org-protocol)))
   :config
   (setq org-capture-templates
-        '(("w" "Web captures" entry (file+headline "~/files/org/notes.org" "WEB")
-           "* %^{Title}    %^G\n\n  Source: %u, %c\n\n  %i"
+        '(("w" "Web captures" entry (file+headline "~/files/org/notes.org" "Inbox")
+           "* %^{Title}\nCaptured On: %U\n#+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n%?"
            :empty-lines 1)
-          ("p" "Contacts" entry (file "~/files/org/contacts.org")
+          ("L" "Protocol Link" entry (file+headline "~/files/org/notes.org" "Inbox")
+           "* %? [[%:link][%:description]] \nCaptured On: %U")
+          ("c" "Contacts" entry (file "~/files/org/contacts.org")
            "** %(org-contacts-template-name)
 :PROPERTIES:%(org-contacts-template-email)
 :END:")
           ("t" "TODO" entry (file "~/files/org/todo.org")
-           "* TODO %^{Task}  %^G\n   %?")))
-  (evil-set-initial-state 'org-capture-mode 'emacs))
+           "* TODO %^{Task}  %^G\n   %?"))))
+
+(use-package orgalist
+  :ensure org-plus-contrib) 
 
 (use-package ox-html
   :ensure org-plus-contrib
@@ -1103,6 +1180,12 @@ The app is chosen from your OS's preference."
 
 (use-package ox-hugo
   :after ox)
+
+(use-package ob-async
+  :after ox
+  :init
+  (require 'ob-async)
+  (setq ob-async-no-async-languages-alist '("ipython")))
   
 ;;; Programming utilities
 (use-package python                     ; Python editing
@@ -1126,16 +1209,21 @@ The app is chosen from your OS's preference."
   :hook ((cider-stacktrace-mode . (lambda ()
                                     (cider-stacktrace-cycle-cause 2 1)))
          (cider-connected . (lambda ()
-                              (cider-repl-clear-banners))))
+                              (cider-repl-clear-banners)
+                              (cider-repl-start))))
   :config
-  (setq
-   nrepl-prompt-to-kill-server-buffer-on-quit nil
-   cider-stacktrace-default-filters '(clj java repl tooling dup)
-   cider-pprint-fn 'fipp
-   ;; Set up Figwheel in ClojureScript REPL
-   cider-cljs-lein-repl "(do (use 'figwheel-sidecar.repl-api) (start-figwheel!) (cljs-repl))"
-   ;; Do not offer to open ClojureScript app in browser
-   cider-offer-to-open-cljs-app-in-browser nil)
+  (defun cider-repl-start ()
+    "Set an inititial REPL configuration."
+    (interactive)
+    (nrepl-send-sync-request
+     (lax-plist-put
+      (nrepl--eval-request "(do (start) (alter-var-root #'clojure.main/repl-caught (partial constantly)) (alter-var-root #'clojure.repl/pst (partial constantly)))")
+      "inhibit-cider-middleware" "true")
+     (cider-current-repl)))
+
+  (setq cider-stacktrace-default-filters '(clj java repl tooling dup)
+        ;; Do not offer to open ClojureScript app in browser
+        cider-offer-to-open-cljs-app-in-browser nil)
 
   (defvar cider-jack-in-start-time nil)
 
@@ -1157,6 +1245,7 @@ The app is chosen from your OS's preference."
   :pin melpa-stable)
 
 (use-package cider-mode                 ; CIDER mode for REPL interaction
+  :after evil
   :ensure cider
   :hook (cider-mode . cider-company-enable-fuzzy-completion)
   :bind (:map cider-mode-map
@@ -1199,7 +1288,9 @@ The app is chosen from your OS's preference."
 
 (use-package nrepl-client              ; Client for Clojure nREPL
   :ensure cider
-  :config (setq nrepl-hide-special-buffers t))
+  :config
+  (setq nrepl-hide-special-buffers t
+        nrepl-prompt-to-kill-server-buffer-on-quit nil))
 
 (use-package cider-repl            ; REPL interactions with CIDER
   :ensure cider
@@ -1244,7 +1335,8 @@ The app is chosen from your OS's preference."
 
 (use-package hy-mode)                   ; Hy language mode
 
-(use-package lsp-mode)
+(use-package lsp-mode
+  :init (setq lsp-inhibit-message t))
 
 (use-package company-lsp)
 
@@ -1254,12 +1346,17 @@ The app is chosen from your OS's preference."
   :after lsp
   :hook (java-mode . lsp))
 
+(use-package dap-mode
+  :after lsp-mode
+  :config
+  (dap-mode t)
+  (dap-ui-mode t))
+
 (use-package yasnippet                  ; Snippets
   :hook (prog-mode . yas-minor-mode)
   :config
   (setq yas-verbosity 1                 ; No need to be so verbose
         yas-wrap-around-region t)
-  ;; (yas-reload-all)
   :diminish yas-minor-mode)
 
 (use-package yasnippet-snippets
@@ -1492,28 +1589,34 @@ The app is chosen from your OS's preference."
 
 (use-package mu4e-alert
   :after mu4e
+  :hook ((after-init . mu4e-alert-enable-mode-line-display)
+         (after-init . mu4e-alert-enable-notifications))
   :init
   (setq mu4e-alert-email-notification-types '(subjects))
-  (mu4e-alert-set-default-style 'libnotify)
-  (mu4e-alert-enable-notifications)
-  (mu4e-alert-enable-mode-line-display))
+  (mu4e-alert-set-default-style 'libnotify))
 
 (use-package pdf-tools
   :magic ("%PDF" . pdf-view-mode)
   :config (pdf-tools-install :no-query))
 
 (use-package calc
-  :custom
-  (math-additional-units
-   '((GiB "1024 * MiB" "Giga Byte")
-     (MiB "1024 * KiB" "Mega Byte")
-     (KiB "1024 * B" "Kilo Byte")
-     (B nil "Byte")
-     (Gib "1024 * Mib" "Giga Bit")
-     (Mib "1024 * Kib" "Mega Bit")
-     (Kib "1024 * b" "Kilo Bit")
-     (b "B / 8" "Bit")))
-  :config (setq math-units-table nil))
+  :init
+  (setq math-additional-units
+        '((GiB "1024 * MiB" "Giga Byte")
+          (MiB "1024 * KiB" "Mega Byte")
+          (KiB "1024 * B" "Kilo Byte")
+          (B nil "Byte")
+          (Gib "1024 * Mib" "Giga Bit")
+          (Mib "1024 * Kib" "Mega Bit")
+          (Kib "1024 * b" "Kilo Bit")
+          (b "B / 8" "Bit"))
+        math-units-table nil))
+
+(use-package reverse-im)
+(use-package reverse-im
+  :hook (after-init . (lambda ()
+                        (require 'reverse-im)
+                        (reverse-im-activate "russian-computer"))))
 
 (provide '.emacs)
 ;;; .emacs ends here
