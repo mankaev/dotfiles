@@ -258,7 +258,6 @@
   :ensure nil
   :hook (calendar-today-visible . calendar-mark-today)
   :config
-  (require 'calendar)
   (setq calendar-date-style 'european
         calendar-week-start-day 1
         calendar-holidays nil))
@@ -291,7 +290,7 @@
   :hook (sh-mode . (lambda ()
                      (setq-local company-backends '((company-shell)))))
   :mode ("\\.zsh\\'" . sh-mode)
-  :bind (("M-s j"   . eshell-here))
+  :bind (("M-s j"   . eshell-toggle))
   :config (setq sh-basic-offset 2))     ; The offset for nested indentation
 
 (use-package mu4e
@@ -430,12 +429,19 @@
 
 (use-package eshell                     ; Emacs command shell
   :ensure nil
-  :bind (("M-s t"   . eshell-here))
-  :hook (eshell-mode . (lambda () ;; Hack to define key in eshell-mode
+  :bind (("M-s t"   . eshell-toggle))
+  :hook (eshell-mode . (lambda ()
+                         (company-mode)
+                         (setq-local company-backends '((company-shell company-files)))
+                         (setq-local company-idle-delay 0.1)
+                         ;; Hack to define key in eshell-mode
                          (define-key eshell-mode-map (kbd "M-s") nil)
-                         (define-key eshell-mode-map (kbd "M-s t") 'eshell-here)))
+                         (define-key eshell-mode-map (kbd "M-s t") 'eshell-toggle)
+                         (define-key eshell-mode-map (kbd "C-l") 'eshell-truncate-buffer)
+                         (define-key eshell-mode-map [tab] 'company-indent-or-complete-common)))
   :config
   (setq eshell-banner-message ""
+        eshell-buffer-maximum-lines 0
         eshell-destroy-buffer-when-process-dies t
         eshell-error-if-no-glob t
         eshell-highlight-prompt nil
@@ -446,19 +452,13 @@
         eshell-prompt-regexp "^$ "
         eshell-save-history-on-exit t
         eshell-scroll-to-bottom-on-input 'all)
-  (setq eshell-visual-commands '("less" "more" "htop" "mc"))
-
-  (defun eshell/clear ()
-    "Clear the eshell buffer"
-    (interactive)
-    (let ((eshell-buffer-maximum-lines 0))
-      (eshell-truncate-buffer)))
+  (setq eshell-visual-commands '("less" "more" "htop" "mc" "ncmpcpp"))
 
   (defun eshell/magit ()
     "Function to open magit-status for the current directory"
     (magit-status-internal "."))
 
-  (defun eshell-here ()
+  (defun eshell-toggle ()
     "Go to eshell and set current directory to the buffer's directory"
     (interactive)
     (let* ((dir (file-name-directory (or (buffer-file-name)
@@ -471,15 +471,15 @@
               (quit-window)
             (delete-window target-window))
         (progn
-          (split-window-vertically (- height))
-          (other-window 1)
+          (setq-local eshell-buffer-name target-buf)
           (eshell)
           (goto-char (point-max))
           (eshell-kill-input)
-          (eshell/pushd ".")
-          (insert (concat "cd " dir))
-          (eshell/cd dir)
-          (eshell-send-input))))))
+          (if (not (string= (concat (eshell/pwd) "/") dir))
+              (progn
+                (insert (concat "cd " dir))
+                (eshell/cd dir)
+                (eshell-send-input))))))))
 
 (use-package em-smart
   :ensure nil
@@ -488,9 +488,6 @@
   (setq eshell-where-to-jump 'begin
         eshell-review-quick-commands nil
         eshell-smart-space-goes-to-end t))
-
-(use-package esh-autosuggest
-  :hook (eshell-mode . esh-autosuggest-mode))
 
 (use-package eldoc                      ; Documentation in the echo area
   :ensure nil
@@ -663,7 +660,8 @@
 (use-package dired                      ; File manager
   :after evil
   :ensure nil
-  :bind (:map dired-mode-map
+  :bind (("M-s d"   . dired-toggle)
+         :map dired-mode-map
               ([return]   . dired-find-alternate-file)
               ([C-return] . open-in-external-app))
   :hook ((dired-mode . turn-on-gnus-dired-mode)
@@ -671,6 +669,40 @@
   :config
   (put 'dired-find-alternate-file 'disabled nil)
 
+  (defun dired-toggle (&optional dir)
+    "Toggle current buffer's directory."
+    (interactive)
+    (let* ((win (selected-window))
+           (buf (buffer-name))
+           (file (buffer-file-name))
+           (dir (or dir (if file (file-name-directory file) default-directory)))
+           (target-bufname "*dired*")
+           (target-buf (get-buffer-create target-bufname))
+           (target-window (get-buffer-window target-buf))
+           (dired-buffer-with-same-dir (dired-find-buffer-nocreate dir))
+           (new-dired-buffer-p
+            (or (not dired-buffer-with-same-dir)
+                (not (string= target-bufname
+                              (buffer-name dired-buffer-with-same-dir))))))
+      (if target-window ;; hide window if target buffer is shown
+          (if (one-window-p)
+              (quit-window)
+            (delete-window target-window))
+        ;; Else show target buffer in a side window
+        (progn
+          (switch-to-buffer target-buf)
+          (with-current-buffer target-buf
+            (if new-dired-buffer-p
+                (progn
+                  (setq default-directory dir)
+                  (if (eq 'dired-mode major-mode)
+                      (setq dired-directory dir)
+                    (funcall 'dired-mode dir))
+                  (unwind-protect
+                      (progn (dired-readin)))))
+            (setq-local dired-toggle-refwin win)
+            ;; try to select target file
+            (if file (dired-goto-file file)))))))
   (defun open-in-external-app ()
     "Open the file where point is or the marked files in external app.
 The app is chosen from your OS's preference."
@@ -756,8 +788,6 @@ The app is chosen from your OS's preference."
         evil-cross-lines t
         evil-move-beyond-eol t
         evil-want-fine-undo t))
-  ;;(evil-set-initial-state 'Info-mode 'motion)
-  ;;(evil-set-initial-state 'help-mode 'motion))
 
 (use-package evil-ediff
   :after evil)
@@ -1059,19 +1089,18 @@ The app is chosen from your OS's preference."
              magit-wip-before-change-mode))
 
 (use-package evil-magit
-  :after (evil magit)
-  :bind (:map magit-diff-mode-map
-              ("q" . #'mu-magit-kill-buffers)
-         :map magit-popup-mode-map
-              ("q" . #'mu-magit-kill-buffers))
+  :after (evil evil-collection magit)
   :config
-  (defun mu-magit-kill-buffers ()
+  (defun my-magit-kill-buffers ()
     "Restore window configuration and kill all Magit buffers."
     (interactive)
     (let ((buffers (magit-mode-get-buffers)))
       (magit-restore-window-configuration)
       (mapc #'kill-buffer buffers)))
-  :init (evil-magit-init))
+  :init
+  (evil-magit-init)
+  (evil-collection-define-key 'normal
+    'magit-status-mode-map "q" 'my-magit-kill-buffers))
 
 (use-package git-commit                 ; Git commit message mode
   :config
@@ -1103,15 +1132,23 @@ The app is chosen from your OS's preference."
 
 (use-package org                        ; Org Plus Contributions
   :ensure org-plus-contrib
-  :hook (org-mode . (lambda ()
-                      (setq-local company-backends '((company-ispell company-files company-dabbrev)))))
+  :hook ((org-mode . (lambda ()
+                       (setq-local company-backends '((company-ispell company-files company-dabbrev)))))
+         (org-babel-after-execute . org-display-inline-images))
   :config
   (org-babel-do-load-languages
-    'org-babel-load-languages
-    '((shell . t)
-      (clojure . t)
-      (emacs-lisp . t)))
+   'org-babel-load-languages
+   '((calc . t)
+     (clojure . t)
+     (ditaa . t)
+     (emacs-lisp . t)
+     (gnuplot . t)
+     (plantuml . t)
+     (python . t)
+     (shell . t)))
   (setq org-babel-clojure-backend 'cider
+        org-ditaa-jar-path "/usr/share/java/ditaa/ditaa-0.11.jar"
+        org-plantuml-jar-path "/usr/share/java/plantuml/plantuml.jar"
         org-src-fontify-natively t
         org-log-done 'time
         org-hide-emphasis-markers t
@@ -1123,14 +1160,15 @@ The app is chosen from your OS's preference."
         org-agenda-start-on-weekday nil
         org-agenda-start-day "-3d"
         org-agenda-window-setup 'current-window
-        ;; Define Agenda files
         org-agenda-files '("~/files/org/todo.org"
                            "~/files/org/work.org"
                            "~/files/org/notes.org")
         org-confirm-babel-evaluate nil
         org-src-tab-acts-natively t
         org-src-preserve-indentation t
-        org-html-inline-images t)
+        org-display-inline-images t
+        org-html-inline-images t
+        org-redisplay-inline-images t)
   (setq org-highest-priority ?A
         org-lowest-priority ?C
         org-default-priority ?A)
@@ -1186,7 +1224,11 @@ The app is chosen from your OS's preference."
   :init
   (require 'ob-async)
   (setq ob-async-no-async-languages-alist '("ipython")))
-  
+ 
+(use-package gnuplot)
+
+(use-package gnuplot-mode)
+
 ;;; Programming utilities
 (use-package python                     ; Python editing
   :bind (:map python-mode-map
@@ -1224,24 +1266,6 @@ The app is chosen from your OS's preference."
   (setq cider-stacktrace-default-filters '(clj java repl tooling dup)
         ;; Do not offer to open ClojureScript app in browser
         cider-offer-to-open-cljs-app-in-browser nil)
-
-  (defvar cider-jack-in-start-time nil)
-
-  (defun start-timing-cider-jack-in (&rest args)
-    (setq cider-jack-in-start-time (current-time)))
-
-  (defun elapsed-time-cider-jack-in (&rest args)
-    (when cider-jack-in-start-time
-      (prog1 (format "%.3f seconds"
-                     (float-time
-                      (time-since cider-jack-in-start-time)))
-        (setq cider-jack-in-start-time nil))))
-
-  (add-function :before
-                (symbol-function 'cider-jack-in)
-                #'start-timing-cider-jack-in)
-  (setq cider-connection-message-fn
-        #'elapsed-time-cider-jack-in)
   :pin melpa-stable)
 
 (use-package cider-mode                 ; CIDER mode for REPL interaction
@@ -1308,7 +1332,6 @@ The app is chosen from your OS's preference."
         cider-repl-display-help-banner nil
         cider-repl-history-display-duplicates nil
         cider-repl-pop-to-buffer-on-connect nil
-        cider-repl-scroll-on-output nil
         cider-repl-display-in-current-window t)
   (evil-set-initial-state 'cider-repl-mode 'insert))
 
@@ -1612,7 +1635,6 @@ The app is chosen from your OS's preference."
           (b "B / 8" "Bit"))
         math-units-table nil))
 
-(use-package reverse-im)
 (use-package reverse-im
   :hook (after-init . (lambda ()
                         (require 'reverse-im)
