@@ -90,6 +90,9 @@
 (setq indicate-empty-lines t
       require-final-newline t)
 
+;; Do not create lock files
+(setq create-lockfiles nil)
+
 (setq kill-ring-max 200                 ; More killed items
       kill-do-not-save-duplicates t     ; No duplicates in kill ring
       ;; Save the contents of the clipboard to kill ring before killing
@@ -120,7 +123,6 @@
 
 ;; Fonts used:
 (add-to-list 'default-frame-alist '(font . "Pragmata Pro-18"))
-(add-to-list 'default-frame-alist '(cursor-color . "red"))
 
 ;; Prevent emacs from creating a backup file filename~
 (setq make-backup-files nil)
@@ -684,11 +686,10 @@
             (or (not dired-buffer-with-same-dir)
                 (not (string= target-bufname
                               (buffer-name dired-buffer-with-same-dir))))))
-      (if target-window ;; hide window if target buffer is shown
+      (if target-window
           (if (one-window-p)
               (quit-window)
             (delete-window target-window))
-        ;; Else show target buffer in a side window
         (progn
           (switch-to-buffer target-buf)
           (with-current-buffer target-buf
@@ -783,6 +784,13 @@ The app is chosen from your OS's preference."
          :map evil-motion-state-map
               ([escape] . evil-normal-state))
   :init
+  (setq evil-emacs-state-cursor '("red" box))
+  (setq evil-normal-state-cursor '("red" box))
+  (setq evil-visual-state-cursor '("orange" box))
+  (setq evil-insert-state-cursor '("red" bar))
+  (setq evil-replace-state-cursor '("red" bar))
+  (setq evil-operator-state-cursor '("red" hollow))
+
   (setq evil-want-keybinding nil
         evil-default-cursor t           ; Do not overwrite cursor colour
         evil-cross-lines t
@@ -992,8 +1000,6 @@ The app is chosen from your OS's preference."
   :config
   (setq markdown-fontify-code-blocks-natively t))
 
-(use-package dired-imenu)
-
 (use-package autorevert
   :config
   ;; auto revert buffers when changed on disk
@@ -1102,6 +1108,15 @@ The app is chosen from your OS's preference."
   (evil-collection-define-key 'normal
     'magit-status-mode-map "q" 'my-magit-kill-buffers))
 
+(use-package evil-org
+  :after org
+  :hook ((org-mode . evil-org-mode)
+         (evil-org-mode . (lambda ()
+                            (evil-org-set-key-theme))))
+  :config
+  (require 'evil-org-agenda)
+  (evil-org-agenda-set-keys))
+
 (use-package git-commit                 ; Git commit message mode
   :config
   (global-git-commit-mode)
@@ -1136,11 +1151,13 @@ The app is chosen from your OS's preference."
                        (setq-local company-backends '((company-ispell company-files company-dabbrev)))))
          (org-babel-after-execute . org-display-inline-images))
   :config
+  (setq org-modules '(org-eshell org-protocol org-habit org-irc org-eww org-bookmark org-elisp-symbol org-man org-notify))
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((calc . t)
      (clojure . t)
      (ditaa . t)
+     (dot . t)
      (emacs-lisp . t)
      (gnuplot . t)
      (plantuml . t)
@@ -1177,7 +1194,6 @@ The app is chosen from your OS's preference."
 
 (use-package org-capture                ; Fast note taking in Org
   :ensure org-plus-contrib
-  :hook (after-init . (lambda () (require 'org-protocol)))
   :config
   (setq org-capture-templates
         '(("w" "Web captures" entry (file+headline "~/files/org/notes.org" "Inbox")
@@ -1208,7 +1224,7 @@ The app is chosen from your OS's preference."
                         (require 'org-notify)
                         (org-notify-start)))
   :config
-  (org-notify-add 'halfhour '(:time "30m"  :actions -notify/window :period "5m" :duration 60)))
+  (org-notify-add 'single '(:time "60m"  :actions -notify/window)))
 
 (use-package ox
   :ensure org-plus-contrib
@@ -1562,7 +1578,7 @@ The app is chosen from your OS's preference."
   :ensure smex
   :hook (find-file . (lambda ()
                        (when (not (file-writable-p buffer-file-name))
-                         (find-alternate-file (concat "/sudo::" buffer-file-name)))))
+                         (counsel-find-file-as-root buffer-file-name))))
   :bind (("M-s i"   . counsel-imenu)
          ("C-x C-f" . counsel-find-file)
          ("C-x C-r" . counsel-recentf)
@@ -1612,11 +1628,11 @@ The app is chosen from your OS's preference."
 
 (use-package mu4e-alert
   :after mu4e
-  :hook ((after-init . mu4e-alert-enable-mode-line-display)
-         (after-init . mu4e-alert-enable-notifications))
   :init
   (setq mu4e-alert-email-notification-types '(subjects))
-  (mu4e-alert-set-default-style 'libnotify))
+  (mu4e-alert-set-default-style 'libnotify)
+  (mu4e-alert-enable-mode-line-display)
+  (mu4e-alert-enable-notifications))
 
 (use-package pdf-tools
   :magic ("%PDF" . pdf-view-mode)
