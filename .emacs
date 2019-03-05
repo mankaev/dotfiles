@@ -261,6 +261,9 @@
   :hook (calendar-today-visible . calendar-mark-today)
   :config
   (setq calendar-date-style 'european
+        calendar-standard-time-zone-name "MSK"
+        calendar-latitude 55.8
+        calendar-longitude 37.6
         calendar-week-start-day 1
         calendar-holidays nil))
 
@@ -551,8 +554,8 @@
 (use-package erc
   :ensure nil
   :hook  ((erc-mode . (lambda ()
-                        (company-mode)
-                        (setq-local company-backends '((company-capf)))))
+                        (setq-local company-backends '((company-capf)))
+                        (company-mode)))
           (erc-text-matched . erc-global-notify))
   :config
   (erc-track-mode t)
@@ -629,6 +632,12 @@
   :mode ("\\.sql\\'" . sql-mode)
   :bind (:map sql-mode-map
          ("C-c m p" . sql-set-product)))
+
+(use-package ielm-mode
+  :ensure nil
+  :hook (ielm-mode . (lambda ()
+                       (setq-local company-backends '((company-capf)))
+                       (company-mode))))
 
 (use-package elisp-mode                 ; Emacs Lisp editing
   :ensure nil
@@ -859,8 +868,7 @@ The app is chosen from your OS's preference."
            eshell-mode
            racket-mode
            racket-repl-mode
-           inferior-lisp-mode
-           inferior-emacs-lisp-mode) . smartparens-strict-mode)
+           ielm-mode) . smartparens-strict-mode)
          (prog-mode . smartparens-mode))
   :init
   (setq sp-autoskip-closing-pair 'always
