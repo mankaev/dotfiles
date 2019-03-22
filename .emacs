@@ -186,7 +186,6 @@
   (require 'use-package))
 (setq-default use-package-always-defer t
               use-package-compute-statistics t
-              ;; use-package-hook-name-suffix nil
               use-package-always-ensure t)
 (require 'diminish)                ;; if you use :diminish
 (require 'bind-key)                ;; if you use any :bind variant
@@ -293,6 +292,7 @@
 (use-package sh-script                  ; Shell scripts
   :ensure nil
   :hook (sh-mode . (lambda ()
+                     (flycheck-mode)
                      (setq-local company-backends '((company-shell)))))
   :mode ("\\.zsh\\'" . sh-mode)
   :bind (("M-s j"   . eshell-toggle))
@@ -331,7 +331,7 @@
         mu4e-user-agent-string "emacs"
         mu4e-headers-include-related nil
         mu4e-user-mail-address-list '("mankaev@gmail.com" "mankaev.i.m@sberbank.ru")
-        mu4e-view-image-max-width 800   ; enable inline images
+        mu4e-view-image-max-width 800
         mu4e-view-show-addresses t
         mu4e-view-show-images nil
         mu4e-completing-read-function 'ivy-completing-read)
@@ -635,15 +635,19 @@
 
 (use-package ielm-mode
   :ensure nil
-  :hook (ielm-mode . (lambda ()
-                       (setq-local company-backends '((company-capf)))
-                       (company-mode))))
+  :hook (inferior-emacs-lisp-mode . (lambda ()
+                                      (setq-local company-backends '((company-capf)))
+                                      (company-mode))))
 
 (use-package elisp-mode                 ; Emacs Lisp editing
   :ensure nil
-  :hook (emacs-lisp-mode . (lambda ()
-                             (add-use-package-to-imenu)
-                             (setq-local company-backends '((company-capf)))))
+  :mode ("Cask\\'" . emacs-lisp-mode)
+  :hook ((emacs-lisp-mode . (lambda ()
+                              (flycheck-elsa-setup)
+                              (add-use-package-to-imenu)
+                              (setq-local company-backends '((company-capf)))))
+         (inferior-emacs-lisp-mode . (lambda ()
+                                       (setq-local comint-input-ring-file-name "~/.emacs.d/.ielm-input.hist"))))
   :bind (:map emacs-lisp-mode-map
               ([C-return] . elisp-def)
               ("M-s j"    . ielm))
@@ -660,6 +664,9 @@
     "Add `use-package' declarations to `imenu'."
     (add-to-list 'imenu-generic-expression
                  use-package-imenu-expression)))
+
+(use-package elsa)
+(use-package flycheck-elsa)
 
 (use-package vc-hooks                   ; Simple version control
   :ensure nil
@@ -837,7 +844,8 @@ The app is chosen from your OS's preference."
         doom-modeline-icon nil
         doom-modeline-major-mode-icon nil)
   (set-face-attribute 'mode-line nil :box nil)
-  (set-face-attribute 'mode-line-inactive nil :box nil))
+  (set-face-attribute 'mode-line-inactive nil :box nil)
+  (set-face-attribute 'header-line nil :box nil))
 
 (use-package page-break-lines           ; Better looking break lines
   :config (global-page-break-lines-mode)
@@ -868,7 +876,7 @@ The app is chosen from your OS's preference."
            eshell-mode
            racket-mode
            racket-repl-mode
-           ielm-mode) . smartparens-strict-mode)
+           inferior-emacs-lisp-mode) . smartparens-strict-mode)
          (prog-mode . smartparens-mode))
   :init
   (setq sp-autoskip-closing-pair 'always
@@ -915,6 +923,8 @@ The app is chosen from your OS's preference."
   (sp-local-pair 'clojure-mode "`" nil :actions nil)
   (sp-local-pair 'cider-repl-mode "'" nil :actions nil)
   (sp-local-pair 'cider-repl-mode "`" nil :actions nil)
+  (sp-local-pair 'inferior-emacs-lisp-mode "'" nil :actions nil)
+  (sp-local-pair 'inferior-emacs-lisp-mode "`" nil :actions nil)
 
   (sp-local-pair 'org-mode "*" "*" :actions '(insert wrap) :unless '(sp-point-after-word-p sp-point-at-bol-p) :wrap "C-*" :skip-match 'sp--org-skip-asterisk)
   (sp-local-pair 'org-mode "_" "_" :unless '(sp-point-after-word-p) :wrap "C-_")
@@ -1217,7 +1227,7 @@ The app is chosen from your OS's preference."
            "* TODO %^{Task}  %^G\n   %?"))))
 
 (use-package orgalist
-  :ensure org-plus-contrib) 
+  :ensure org-plus-contrib)
 
 (use-package ox-html
   :ensure org-plus-contrib
@@ -1267,7 +1277,8 @@ The app is chosen from your OS's preference."
   (jedi:setup))
 
 (use-package elisp-def
-  :hook ((emacs-lisp-mode ielm-mode) . elisp-def-mode)
+  :hook ((emacs-lisp-mode
+          inferior-emacs-lisp-mode) . elisp-def-mode)
   :diminish elisp-def-mode)
 
 (use-package cider                      ; Clojure development environment
@@ -1308,7 +1319,8 @@ The app is chosen from your OS's preference."
   (evil-set-initial-state 'cider-repl-history-mode 'motion)
   (setq cider-show-eval-spinner nil
         cider-prompt-for-symbol nil
-        cider-jdk-src-paths '("/usr/lib/jvm/java-8-openjdk/src"))
+        cider-jdk-src-paths '("~/packages/clojure/src/jvm"
+                              "/usr/lib/jvm/java-11-openjdk/src/java.base"))
   :diminish cider-mode)
 
 (use-package clojure-mode               ; Major mode for Clojure files
@@ -1586,7 +1598,7 @@ The app is chosen from your OS's preference."
   :ensure smex
   :hook (find-file . (lambda ()
                        (when (not (file-writable-p buffer-file-name))
-                         (counsel-find-file-as-root buffer-file-name))))
+                         (find-alternate-file (concat "/sudo:root@localhost:" buffer-file-name)))))
   :bind (("M-s i"   . counsel-imenu)
          ("C-x C-f" . counsel-find-file)
          ("C-x C-r" . counsel-recentf)
@@ -1600,7 +1612,9 @@ The app is chosen from your OS's preference."
               ([escape] . minibuffer-keyboard-quit))
   :config
   (setq counsel-git-cmd "rg --files"
-        counsel-rg-base-command "rg -i -M 120 --no-heading --line-number --color never %s .")
+        counsel-rg-base-command "rg -i -M 120 --no-heading --line-number --color never %s ."
+        counsel-grep-base-command "rg -i -M 120 --no-heading --line-number --color never '%s' %s")
+
   (counsel-mode)
   :diminish counsel-mode)
 
@@ -1615,6 +1629,20 @@ The app is chosen from your OS's preference."
               ("M-s f"   . find-file-in-project-by-selected))
   :config (setq ffip-use-rust-fd t))
 
+(use-package neotree
+  :bind (:map prog-mode-map
+              ("C-<tab>"   . neotree-toggle)
+         :map neotree-mode-map
+              ("C-<tab>"   . neotree-toggle))
+  :init
+  (setq projectile-switch-project-action 'neotree-projectile-action)
+  (setq neo-theme 'nerd
+        neo-smart-open t
+        neo-show-hidden-files t
+        neo-autorefresh nil
+        neo-vc-integration '(face)
+        neo-show-slash-for-folder nil))
+
 (use-package swiper
   :bind (("M-s s"   . swiper)))
 
@@ -1622,7 +1650,7 @@ The app is chosen from your OS's preference."
   :bind (("C-x C-b" . ivy-switch-buffer)
          :map ivy-minibuffer-map
               ("M-<tab>" . ivy-next-line)
-              ([tab] . ivy-alt-done))
+              ([tab]     . ivy-alt-done))
   :config
   (setq ivy-use-virtual-buffers t    ; add ‘recentf-mode’ and bookmarks to ‘ivy-switch-buffer’.
         ivy-wrap t
