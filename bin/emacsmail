@@ -1,2 +1,3 @@
 #!/bin/sh
-emacsclient -n --eval "(mu4e~compose-browse-url-mail \"$@\")"
+swaymsg "[class=Emacs] focus"
+emacsclient -n --eval "(browse-url \"$@\")"

@@ -1,0 +1,2 @@
+#!/bin/bash
+GDK_BACKEND=x11 TZ=UTC ionice -c 3 -n 7 nice -n 19 /usr/bin/firefox &

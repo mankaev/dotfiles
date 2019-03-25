@@ -2,54 +2,5 @@ Xft.antialias                 :true
 Xft.lcdfilter                 :lcddefault
 Xcursor.size                  :22
 
-! Zenburn color-scheme
-XTerm*background              :#3f3f3f
-XTerm*foreground              :#dcdccc
-
-! black + red
-!XTerm*color0                 :#3f3f3f
-XTerm*color0                  :#1f1f1f
-XTerm*color1                  :#705050
-
-! green + yellow
-XTerm*color2                  :#60b48a
-XTerm*color3                  :#dfaf8f
-
-! blue + purple
-XTerm*color4                  :#506070
-XTerm*color5                  :#dc8cc3
-
-! cyan + white
-XTerm*color6                  :#8cd0d3
-XTerm*color7                  :#dcdccc
-
-! bright-black + bright-red
-XTerm*color8                  :#709080
-XTerm*color9                  :#dca3a3
-
-! bright-green + bright-yellow
-XTerm*color10                 :#c3bf9f
-XTerm*color11                 :#f0dfaf
-
-! bright-blue + bright-purple
-XTerm*color12                 :#94bff3
-XTerm*color13                 :#ec93d3
-
-! bright-cyan + bright-white
-XTerm*color14                 :#93e0e3
-XTerm*color15                 :#ffffff
-
-XTerm*cursorColor             :red
-XTerm*cursorBlink             :true
-XTerm*selectToClipboard       :true
-XTerm*AllowBoldFonts          :false
-XTerm*locale                  :true
-XTerm*fastScroll              :true
-XTerm*faceName                :xft:Pragmata Pro Mono:size=18
-XTerm*.utf8                   :always
-XTerm*.utf8Fonts              :always
-XTerm*eightBitInput           :false
-XTerm*metaSendsEscape         :true
-*saveLines                    :10000
-
 Xcursor.theme: Adwaita
+emacs.font: Pragmata Pro-18

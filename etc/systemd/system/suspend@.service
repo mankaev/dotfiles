@@ -3,9 +3,8 @@ Description=User suspend actions
 
 [Service]
 User=%I
-Environment=DISPLAY=:0
 Type=forking
-ExecStart=/usr/bin/i3lock -c 3f3f3f
+ExecStart=/usr/bin/swaylock -c 3f3f3f
 
 [Install]
 WantedBy=sleep.target

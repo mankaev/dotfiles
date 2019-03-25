@@ -1,0 +1,17 @@
+font=Pragmata Pro 18
+default-timeout=3000
+format=%s
+border-color=#6F6F6F
+
+[urgency=low]
+background-color=#2B2B2B
+text-color=#DCDCCC
+
+[urgency=normal]
+background-color=#3F3F3F
+text-color=#DCDCCC
+
+[urgency=high]
+background-color=#8C5353
+text-color=#FFFFFF
+default-timeout=0

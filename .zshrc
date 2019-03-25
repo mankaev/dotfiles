@@ -9,7 +9,7 @@ plugins=(git git-extras git-remote-branch nmap adb cp lein autojump python)
 
 source $ZSH/oh-my-zsh.sh
 
-export PATH=$HOME/.local/bin:$HOME/bin:/usr/bin/core_perl:/usr/bin/site_perl:/usr/bin/vendor_perl:$HOME/.pear/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+export PATH=$HOME/bin:$HOME/.local/bin:$HOME/.cask/bin:$HOME/.luarocks/bin:$HOME/.gem/ruby/2.6.0/bin:$HOME/bin:$HOME/.cargo/bin:/usr/bin/core_perl:/usr/bin/site_perl:/usr/bin/vendor_perl:$HOME/.pear/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 export LC_ALL="en_GB.UTF-8"
 export VISUAL=emacsclient
@@ -19,22 +19,22 @@ export ALTERNATE_EDITOR=vim
 
 export PARINIT="rTbgqR B=.,?_A_a Q=_s>|"
 
-export QEMU_AUDIO_DRV=alsa
-export QEMU_ALSA_DAC_BUFFER_SIZE=512
-export QEMU_ALSA_DAC_PERIOD_SIZE=170
+# export QEMU_AUDIO_DRV=alsa
+# export QEMU_ALSA_DAC_BUFFER_SIZE=512
+# export QEMU_ALSA_DAC_PERIOD_SIZE=170
+export QEMU_AUDIO_DRV=pa
 export GTAGSFORCECPP=true
 export MOZ_USE_OMTP=1
 export MOZ_ACCELERATED=1
 export MOZ_WEBRENDER=1
 
-export DISPLAY=:0
+export BROWSER=/usr/bin/firefox-developer-edition
 
-export BROWSER=/usr/bin/iceweasel
-
-export XDG_RUNTIME_DIR=/run/user/1000
 export _JAVA_AWT_WM_NONREPARENTING=1
-export _JAVA_OPTIONS='-Dawt.useSystemAAFontSettings=on -Dswing.aatext=true'
-export LEIN_FAST_TRAMPOLINE=1
+export _JAVA_OPTIONS='-Dawt.useSystemAAFontSettings=lcd -Dswing.aatext=true -Dswing.defaultlaf=com.sun.java.swing.plaf.gtk.GTKLookAndFeel -Dswing.crossplatformlaf=com.sun.java.swing.plaf.gtk.GTKLookAndFeel -Dsun.java2d.opengl=true -Djdk.gtk.version=3'
+_SILENT_JAVA_OPTIONS="$_JAVA_OPTIONS"
+unset _JAVA_OPTIONS
+alias java='java "$_SILENT_JAVA_OPTIONS"'
 
 ulimit -c unlimited
 
@@ -57,6 +57,18 @@ function ls () {
 
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
+export GDK_BACKEND=wayland
+export SDL_VIDEODRIVER=wayland
+export CLUTTER_BACKEND=wayland
+export ECORE_EVAS_ENGINE=wayland_egl
+export ELM_ENGINE=wayland_egl
+export QT_QPA_PLATFORM=wayland-egl
+export QT_DISABLE_WINDOWDECORATION=1
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+# export XDG_SESSION_TYPE=wayland
+export XKB_DEFAULT_LAYOUT=us,ru
+export XKB_DEFAULT_OPTIONS=grp:caps_toggle
+
 # for Emacs and tramp
 if [[ "$TERM" == "dumb" ]]
 then
@@ -66,6 +78,10 @@ then
   PS1='$ '
 fi
 
-# for tmux
-[[ $- != *i* ]] && return
-[[ -z "$TMUX" ]] && exec tmux
+# start sway
+if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
+  exec sway
+else # start tmux
+  [[ $- != *i* ]] && return
+  [[ -z "$TMUX" ]] && exec tmux
+fi

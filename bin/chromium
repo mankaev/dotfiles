@@ -1,26 +1,25 @@
 #!/bin/bash
-TZ=UTC nice -n 19 /usr/bin/inox --disable \
+GDK_BACKEND=x11 TZ=UTC ionice -c 3 -n 7 nice -n 19 /usr/bin/chromium --disable \
     --disable-translate \
     --disable-infobars \
     --disable-suggestions-service \
     --disable-save-password-bubble \
     --disable-quic \
     --disable-notifications \
-    --disable-reading-from-canvas \
     --disable-sync-preferences \
-    --process-per-site \
     --disable-reading-from-canvas \
-    --start-maximized \
+    --enable-native-gpu-memory-buffers \
+    --enable-webrtc-hw-h264-encoding \
     --enable-precache \
     --enable-native-notifications \
+    --start-maximized \
     --remote-debugging-port=9222 \
     --no-first-run \
     --hide-scrollbars \
     --fast \
     --fast-start \
     --wm-window-animations-disabled \
-    --enable-native-gpu-memory-buffers \
-    --enable-webrtc-hw-h264-encoding \
     --process-per-site \
+    # --single-process \
     # --disable-remote-fonts \
     # --kiosk
