@@ -123,16 +123,16 @@ bindsym $mod+Ctrl+j exec mpc next
 bindsym $mod+Ctrl+h exec mpc seek -00:00:05
 bindsym $mod+Ctrl+l exec mpc seek +00:00:05
 
-# assign [app_id="Emacs"]       1
-assign [class="Emacs"]       1
+assign [class="Emacs"]        1
 assign [app_id="termite"]     2
-assign [class="Firefox"]     3
+assign [class="Firefox"]      3
 assign [app_id="chromium"]    4
 assign [app_id="xfreerdp"]    4
 assign [app_id="calibre"]     5
 assign [app_id="shotwell"]    6
 assign [app_id="Psi+"]        7
 
+exec mako
 exec termite
 exec firefox
 exec emacs

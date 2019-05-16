@@ -1,0 +1,2 @@
+#!/bin/sh
+ffmpeg -threads 4 -loglevel error -y -ss 0 -i "$*" -frames:v 1 -vf "scale=640:480:force_original_aspect_ratio=increase,crop=640:480" -f image2 -

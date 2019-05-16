@@ -104,6 +104,16 @@
       recenter-positions '(top middle bottom) ;; Disable mouse scrolling acceleration
       mouse-wheel-progressive-speed nil)
 
+(mouse-avoidance-mode 'banish)
+(setq mouse-wheel-mode                nil
+      mouse-avoidance-banish-position '((frame-or-window   . frame)
+                                        (side              . right)
+                                        (side-pos          . 0)
+                                        (top-or-bottom     . bottom)
+                                        (top-or-bottom-pos . 0)))
+
+(setq display-hourglass nil)
+
 (setq utf-translate-cjk-mode nil        ; disable CJK coding/encoding
       buffer-file-coding-system 'utf-8
       default-file-name-coding-system 'utf-8
@@ -127,9 +137,6 @@
 ;; Prevent emacs from creating a backup file filename~
 (setq make-backup-files nil)
 
-(setq auto-save-list-file-prefix     "~/.emacs.d/autosave/"
-      auto-save-file-name-transforms '((".*" "~/.emacs.d/autosave/" t)))
-
 ;; Do not confirm before quitting Emacs
 (setq confirm-kill-emacs nil)
 (setq confirm-kill-processes nil)
@@ -149,6 +156,7 @@
       inhibit-startup-echo-area-message t
       inhibit-startup-buffer-menu t
       inhibit-startup-message t
+      initial-buffer-choice nil
       initial-scratch-message nil)
 
 ;; Copy to system clipboards
@@ -164,6 +172,7 @@
 (setq-default cursor-in-non-selected-windows t)
 
 (setq pop-up-frames nil)                ; No popup frames
+(setq pop-up-windows nil)               ; No popup windows
 
 (setq frame-resize-pixelwise t ; Resize by pixels
       frame-title-format
@@ -232,7 +241,14 @@
 
 (use-package show-paren-mode
   :ensure nil
-  :hook (prog-mode))
+  :hook (prog-mode)
+  :init
+  (setq show-paren-when-point-inside-paren t
+        show-paren-when-point-in-periphery t))
+
+(use-package term
+  :bind (:map term-raw-map
+              ("M-x" . nil)))
 
 (use-package ediff-wind                 ; Ediff window management
   :ensure nil
@@ -249,6 +265,7 @@
   (setq eww-header-line-format nil
         browse-url-browser-function 'browse-url-xdg-open
         shr-width 80
+        shr-inhibit-images t ;; while Emacs crashes
         shr-use-colors nil
         shr-use-fonts nil)
   :config
@@ -327,6 +344,7 @@
         mu4e-hide-index-messages t
         mu4e-org-contacts-file "~/files/org/contacts.org"
         mu4e-sent-folder "/"
+        mu4e-split-view 'same-window
         mu4e-update-interval 180
         mu4e-user-agent-string "emacs"
         mu4e-headers-include-related nil
@@ -635,9 +653,9 @@
 
 (use-package ielm-mode
   :ensure nil
-  :hook (inferior-emacs-lisp-mode . (lambda ()
-                                      (setq-local company-backends '((company-capf)))
-                                      (company-mode))))
+  :hook (ielm-mode . (lambda ()
+                       (setq-local company-backends '((company-capf)))
+                       (company-mode))))
 
 (use-package elisp-mode                 ; Emacs Lisp editing
   :ensure nil
@@ -646,11 +664,11 @@
                               (flycheck-elsa-setup)
                               (add-use-package-to-imenu)
                               (setq-local company-backends '((company-capf)))))
-         (inferior-emacs-lisp-mode . (lambda ()
-                                       (setq-local comint-input-ring-file-name "~/.emacs.d/.ielm-input.hist"))))
+         (ielm-mode . (lambda ()
+                        (setq-local comint-input-ring-file-name "~/.emacs.d/.ielm-input.hist"))))
   :bind (:map emacs-lisp-mode-map
               ([C-return] . elisp-def)
-              ("M-s j"    . ielm))
+              ("M-s j"    . projectile-run-ielm))
   :interpreter ("emacs" . emacs-lisp-mode)
   :config
   (defconst use-package-imenu-expression
@@ -667,6 +685,93 @@
 
 (use-package elsa)
 (use-package flycheck-elsa)
+
+(use-package slime
+  :mode (".sbclrc\\'" . lisp-mode)
+  :bind (:map lisp-mode-map
+              ([C-return] . slime-edit-definition)
+              ("M-s j"    . slime))
+  :hook (slime-mode . (lambda ()
+                        (setq-local browse-url-browser-function 'eww-browse-url)))
+  :init
+  (setq slime-contribs '(slime-asdf
+                         slime-autodoc
+                         slime-company
+                         slime-compiler-notes-tree
+                         slime-fancy
+                         slime-hyperdoc
+                         slime-indentation
+                         slime-macrostep
+                         slime-mdot-fu
+                         slime-presentations
+                         slime-quicklisp
+                         slime-references
+                         slime-sbcl-exts
+                         slime-repl
+                         slime-sprof
+                         slime-tramp
+                         slime-xref-browser
+                         inferior-slime))
+
+  (defadvice slime-repl-emit (around slime-repl-ansi-colorize activate compile)
+    (with-current-buffer (slime-output-buffer)
+      (let ((start slime-output-start))
+        (setq ad-return-value ad-do-it)
+        (ansi-color-apply-on-region start slime-output-end))))
+
+  (setq ;; lisp-loop-indent-subclauses nil
+   ;; lisp-loop-indent-forms-like-keywords t
+   ;; lisp-indent-function 'common-lisp-indent-function
+   ;; inferior-lisp-program "ros -L sbcl -Q -l ~/.sbclrc run"
+   common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/"
+   slime-completion-at-point-functions 'slime-fuzzy-complete-symbol
+   slime-net-coding-system 'utf-8-unix
+   slime-startup-animation nil
+   slime-inhibit-pipelining nil
+   slime-default-lisp 'sbcl
+   slime-highlight-compiler-notes t
+   slime-kill-without-query-p t
+   slime-lisp-implementations '((sbcl  ("sbcl" "--noinform")))
+   slime-repl-history-remove-duplicates t
+   slime-repl-history-trim-whitespaces t))
+
+(use-package slime-company
+  :init
+  (setq slime-company-completion 'fuzzy
+        slime-company-major-modes '(lisp-mode slime-repl-mode)))
+
+;; (use-package sly
+;;   :after (evil evil-collection)
+;;   :mode (".sbclrc\\'" . lisp-mode)
+;;   :bind (:map lisp-mode-map
+;;               ([C-return] . sly-edit-definition)
+;;               ("M-s j"    . sly))
+;;   :hook (sly-mrepl-mode . (lambda ()
+;;                             (company-mode)
+;;                             (setq-local company-backends '((company-capf)))))
+;;   :hook (sly-mode . (lambda ()
+;;                       (company-mode)
+;;                       (setq-local company-backends '((company-capf)))))
+;;   :init
+;;   (setq sly-default-lisp 'sbcl
+;;         sly-lisp-implementations '((sbcl  ("sbcl" "--noinform")))
+;;         sly-mrepl-output-filter-functions '(ansi-color-apply)))
+
+
+(use-package sdcv
+  :init (setq sdcv-word-pronounce nil)
+  :config
+  (evil-set-initial-state 'sdcv-mode 'normal)
+  (evil-collection-define-key 'normal 'sdcv-mode-map "q" 'sdcv-quit)
+  (evil-collection-define-key '(visual normal) 'sdcv-mode-map (kbd "C-j") 'sdcv-next-dictionary)
+  (evil-collection-define-key '(visual normal) 'sdcv-mode-map (kbd "C-k") 'sdcv-previous-dictionary))
+
+(use-package elfeed
+  :init
+  (setq elfeed-feeds
+        '("https://www.archlinux.org/feeds/news/"
+          "http://planet.lisp.org/rss20.xml"
+          "http://planet.emacslife.com/atom.xml")))
 
 (use-package vc-hooks                   ; Simple version control
   :ensure nil
@@ -838,7 +943,7 @@ The app is chosen from your OS's preference."
 (use-package doom-modeline
   :hook (after-init . doom-modeline-mode)
   :init
-  (setq doom-modeline-buffer-file-name-style 'relative-from-project
+  (setq doom-modeline-buffer-file-name-style 'file-name
         doom-modeline-height 35
         doom-modeline-bar-width 10
         doom-modeline-icon nil
@@ -856,7 +961,7 @@ The app is chosen from your OS's preference."
 (use-package parinfer
   :hook ((clojure-mode
           emacs-lisp-mode
-          common-lisp-mode
+          lisp-mode
           scheme-mode
           lisp-mode
           racket-mode) . parinfer-mode)
@@ -873,10 +978,12 @@ The app is chosen from your OS's preference."
   :hook (((emacs-lisp-mode
            clojure-mode
            cider-repl-mode
+           slime-mode
+           slime-repl-mode
            eshell-mode
            racket-mode
            racket-repl-mode
-           inferior-emacs-lisp-mode) . smartparens-strict-mode)
+           ielm-mode) . smartparens-strict-mode)
          (prog-mode . smartparens-mode))
   :init
   (setq sp-autoskip-closing-pair 'always
@@ -919,6 +1026,10 @@ The app is chosen from your OS's preference."
   (sp-local-pair 'emacs-lisp-mode "`" nil :actions nil)
   (sp-local-pair 'lisp-interaction-mode "'" nil :actions nil)
   (sp-local-pair 'lisp-interaction-mode "`" nil :actions nil)
+  (sp-local-pair 'lisp-mode "'" nil :actions nil)
+  (sp-local-pair 'lisp-mode "`" nil :actions nil)
+  (sp-local-pair 'slime-repl-mode "'" nil :actions nil)
+  (sp-local-pair 'slime-repl-mode "`" nil :actions nil)
   (sp-local-pair 'clojure-mode "'" nil :actions nil)
   (sp-local-pair 'clojure-mode "`" nil :actions nil)
   (sp-local-pair 'cider-repl-mode "'" nil :actions nil)
@@ -969,7 +1080,9 @@ The app is chosen from your OS's preference."
 (use-package undo-tree                  ; Show buffer changes as a tree
   :config
   (setq undo-tree-visualizer-diff t
-        undo-tree-visualizer-timestamps t)
+        undo-tree-auto-save-history t
+        undo-tree-visualizer-timestamps t
+        undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo")))
   (global-undo-tree-mode)
   :diminish undo-tree-mode)
 
@@ -987,10 +1100,12 @@ The app is chosen from your OS's preference."
   :config (save-place-mode t))
 
 (use-package super-save                 ; Autosave buffers when they lose focus
-  :config
+  :init
   (setq super-save-auto-save-when-idle t
         super-save-remote-files nil)
-  (setq auto-save-default nil)
+  (setq auto-save-list-file-prefix     "~/.emacs.d/autosave/"
+        auto-save-file-name-transforms '((".*" "~/.emacs.d/autosave/" t))
+        auto-save-default nil)
   (super-save-mode)
   :diminish super-save-mode)
 
@@ -1088,7 +1203,6 @@ The app is chosen from your OS's preference."
         projectile-completion-system 'ivy
         projectile-globally-ignored-files '("TAGS" "GPATH" "GRTAGS" "GTAGS" "ID")
         projectile-find-dir-includes-top-level t)
-        ;; projectile-mode-line '(:eval (format " Proj[%s]" (projectile-project-name))))
 
   (projectile-mode)
   ;; Remove dead projects when Emacs is idle
@@ -1240,9 +1354,8 @@ The app is chosen from your OS's preference."
   :ensure org-plus-contrib
   :hook (after-init . (lambda ()
                         (require 'org-notify)
-                        (org-notify-start)))
-  :config
-  (org-notify-add 'single '(:time "60m"  :actions -notify/window)))
+                        (org-notify-start)
+                        (org-notify-add 'single '(:time "60m"  :actions -notify/window)))))
 
 (use-package ox
   :ensure org-plus-contrib
@@ -1278,8 +1391,10 @@ The app is chosen from your OS's preference."
 
 (use-package elisp-def
   :hook ((emacs-lisp-mode
-          inferior-emacs-lisp-mode) . elisp-def-mode)
+          ielm-mode) . elisp-def-mode)
   :diminish elisp-def-mode)
+
+(use-package helpful)
 
 (use-package cider                      ; Clojure development environment
   :after clojure-mode
@@ -1357,6 +1472,7 @@ The app is chosen from your OS's preference."
   :hook (cider-repl-mode . (lambda ()
                              (company-mode)
                              (cider-company-enable-fuzzy-completion)
+                             (define-key cider-repl-mode-map (kbd "M-s") nil)
                              (setq-local company-backends '((company-capf)))))
   :bind (:map cider-repl-mode-map
               ("C-l" . cider-repl-clear-buffer))
@@ -1368,8 +1484,7 @@ The app is chosen from your OS's preference."
         cider-repl-display-help-banner nil
         cider-repl-history-display-duplicates nil
         cider-repl-pop-to-buffer-on-connect nil
-        cider-repl-display-in-current-window t)
-  (evil-set-initial-state 'cider-repl-mode 'insert))
+        cider-repl-display-in-current-window t))
 
 (use-package clj-refactor               ; Refactoring utilities
   :hook (cider-mode . clj-refactor-mode)
@@ -1581,13 +1696,6 @@ The app is chosen from your OS's preference."
   :config
   (setq ggtags-use-sqlite3 t))
 
-(use-package undo-tree
-  :config
-  (setq undo-tree-visualizer-timestamps t
-        undo-tree-visualizer-diff t)
-  (global-undo-tree-mode)
-  :diminish undo-tree-mode)
-
 (use-package counsel-gtags
   :config
   (setq counsel-gtags-auto-update t)
@@ -1597,7 +1705,8 @@ The app is chosen from your OS's preference."
 (use-package counsel
   :ensure smex
   :hook (find-file . (lambda ()
-                       (when (not (file-writable-p buffer-file-name))
+                       (when (and (eq 0 (nth 3 (file-attributes buffer-file-name)))
+                                  (not (file-writable-p buffer-file-name)))
                          (find-alternate-file (concat "/sudo:root@localhost:" buffer-file-name)))))
   :bind (("M-s i"   . counsel-imenu)
          ("C-x C-f" . counsel-find-file)
@@ -1638,8 +1747,11 @@ The app is chosen from your OS's preference."
   (setq projectile-switch-project-action 'neotree-projectile-action)
   (setq neo-theme 'nerd
         neo-smart-open t
+        neo-window-position 'right
+        neo-mode-line-type 'default
         neo-show-hidden-files t
         neo-autorefresh nil
+        neo-window-width 40
         neo-vc-integration '(face)
         neo-show-slash-for-folder nil))
 
@@ -1674,16 +1786,24 @@ The app is chosen from your OS's preference."
   :magic ("%PDF" . pdf-view-mode)
   :config (pdf-tools-install :no-query))
 
+(use-package transmission
+  :config
+  (setq transmission-host "192.168.1.1"
+        transmission-refresh-modes '(transmission-mode
+                                     transmission-files-mode
+                                     transmission-info-mode
+                                     transmission-peers-mode)))
+
 (use-package calc
   :init
   (setq math-additional-units
         '((GiB "1024 * MiB" "Giga Byte")
           (MiB "1024 * KiB" "Mega Byte")
-          (KiB "1024 * B" "Kilo Byte")
+          (KiB "1024 * B"   "Kilo Byte")
           (B nil "Byte")
           (Gib "1024 * Mib" "Giga Bit")
           (Mib "1024 * Kib" "Mega Bit")
-          (Kib "1024 * b" "Kilo Bit")
+          (Kib "1024 * b"   "Kilo Bit")
           (b "B / 8" "Bit"))
         math-units-table nil))
 
