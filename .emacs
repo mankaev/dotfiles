@@ -191,11 +191,12 @@
   (package-install 'diminish)
   (package-install 'dash))
 
-(eval-when-compile
-  (require 'use-package))
 (setq-default use-package-always-defer t
               use-package-compute-statistics t
-              use-package-always-ensure t)
+              use-package-always-ensure t
+              use-package-enable-imenu-support t)
+(eval-when-compile
+  (require 'use-package))
 (require 'diminish)                ;; if you use :diminish
 (require 'bind-key)                ;; if you use any :bind variant
 (require 'dash)
@@ -207,6 +208,14 @@
 (use-package server                     ; The server of `emacsclient'
   :ensure nil
   :hook (after-init . server-start))
+
+(use-package display-time
+  :ensure nil
+  :init
+  (setq display-time-format "  %H:%M"
+        display-time-mail-string ""
+        display-time-default-load-average nil)
+  (display-time-mode))
 
 (use-package hideshow
   :ensure nil
@@ -245,6 +254,10 @@
   :init
   (setq show-paren-when-point-inside-paren t
         show-paren-when-point-in-periphery t))
+
+(use-package arc-mode
+ :ensure nil
+ :hook (archive-extract . read-only-mode))
 
 (use-package term
   :bind (:map term-raw-map
@@ -393,7 +406,7 @@
                                                         "Управление развития платформенных сервисов кибербезопасности\n"
                                                         "Группа разработки\n\n"
                                                         "Вн.тел.: 8-557-71013.\n"
-                                                        "Россия, Москва, Варшавское шоссе 25а строение 6\n"))
+                                                        "Россия, Москва, Новоданиловская набережная 10 стр. 1\n"))
                       ( system-name                  . "mankaev")
                       ( mu4e-sent-messages-behavior  . sent)
                       ( epg-user-id                  . "9D9F26BEE01F94A1A78F079A61E58E5920A55728")
@@ -662,37 +675,30 @@
   :mode ("Cask\\'" . emacs-lisp-mode)
   :hook ((emacs-lisp-mode . (lambda ()
                               (flycheck-elsa-setup)
-                              (add-use-package-to-imenu)
                               (setq-local company-backends '((company-capf)))))
          (ielm-mode . (lambda ()
                         (setq-local comint-input-ring-file-name "~/.emacs.d/.ielm-input.hist"))))
   :bind (:map emacs-lisp-mode-map
               ([C-return] . elisp-def)
               ("M-s j"    . projectile-run-ielm))
-  :interpreter ("emacs" . emacs-lisp-mode)
-  :config
-  (defconst use-package-imenu-expression
-    `("Use Package" ,(rx "(use-package" (optional "-with-elapsed-timer")
-                         symbol-end (1+ (syntax whitespace)) symbol-start
-                         (group-n 1 (1+ (or (syntax word) (syntax symbol))))
-                         symbol-end) 1)
-    "IMenu expression for `use-package' declarations.")
-
-  (defun add-use-package-to-imenu ()
-    "Add `use-package' declarations to `imenu'."
-    (add-to-list 'imenu-generic-expression
-                 use-package-imenu-expression)))
+  :interpreter ("emacs" . emacs-lisp-mode))
 
 (use-package elsa)
 (use-package flycheck-elsa)
 
 (use-package slime
-  :mode (".sbclrc\\'" . lisp-mode)
+  :mode ((".sbclrc\\'" . lisp-mode))
   :bind (:map lisp-mode-map
               ([C-return] . slime-edit-definition)
-              ("M-s j"    . slime))
+              ("M-s j"    . slime)
+              ("C-l"      . slime-repl-clear-buffer))
+  :hook (slime-repl-mode . (lambda ()
+                             (setq-local browse-url-browser-function 'eww-browse-url)))
   :hook (slime-mode . (lambda ()
-                        (setq-local browse-url-browser-function 'eww-browse-url)))
+                        (setq-local browse-url-browser-function 'eww-browse-url)
+                        (setq-local lisp-loop-indent-subclauses nil)
+                        (setq-local lisp-loop-indent-forms-like-keywords t)
+                        (setq-local lisp-indent-function 'common-lisp-indent-function)))
   :init
   (setq slime-contribs '(slime-asdf
                          slime-autodoc
@@ -719,44 +725,23 @@
         (setq ad-return-value ad-do-it)
         (ansi-color-apply-on-region start slime-output-end))))
 
-  (setq ;; lisp-loop-indent-subclauses nil
-   ;; lisp-loop-indent-forms-like-keywords t
-   ;; lisp-indent-function 'common-lisp-indent-function
-   ;; inferior-lisp-program "ros -L sbcl -Q -l ~/.sbclrc run"
-   common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/"
-   slime-completion-at-point-functions 'slime-fuzzy-complete-symbol
-   slime-net-coding-system 'utf-8-unix
-   slime-startup-animation nil
-   slime-inhibit-pipelining nil
-   slime-default-lisp 'sbcl
-   slime-highlight-compiler-notes t
-   slime-kill-without-query-p t
-   slime-lisp-implementations '((sbcl  ("sbcl" "--noinform")))
-   slime-repl-history-remove-duplicates t
-   slime-repl-history-trim-whitespaces t))
+  (setq common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/"
+        slime-completion-at-point-functions 'slime-fuzzy-complete-symbol
+        slime-net-coding-system 'utf-8-unix
+        slime-startup-animation nil
+        slime-inhibit-pipelining nil
+        slime-default-lisp 'sbcl
+        slime-highlight-compiler-notes t
+        slime-kill-without-query-p t
+        slime-autodoc-use-multiline-p t
+        slime-lisp-implementations '((sbcl  ("sbcl" "--noinform")))
+        slime-repl-history-remove-duplicates t
+        slime-repl-history-trim-whitespaces t))
 
 (use-package slime-company
   :init
   (setq slime-company-completion 'fuzzy
         slime-company-major-modes '(lisp-mode slime-repl-mode)))
-
-;; (use-package sly
-;;   :after (evil evil-collection)
-;;   :mode (".sbclrc\\'" . lisp-mode)
-;;   :bind (:map lisp-mode-map
-;;               ([C-return] . sly-edit-definition)
-;;               ("M-s j"    . sly))
-;;   :hook (sly-mrepl-mode . (lambda ()
-;;                             (company-mode)
-;;                             (setq-local company-backends '((company-capf)))))
-;;   :hook (sly-mode . (lambda ()
-;;                       (company-mode)
-;;                       (setq-local company-backends '((company-capf)))))
-;;   :init
-;;   (setq sly-default-lisp 'sbcl
-;;         sly-lisp-implementations '((sbcl  ("sbcl" "--noinform")))
-;;         sly-mrepl-output-filter-functions '(ansi-color-apply)))
-
 
 (use-package sdcv
   :init (setq sdcv-word-pronounce nil)
@@ -769,7 +754,10 @@
 (use-package elfeed
   :init
   (setq elfeed-feeds
-        '("https://www.archlinux.org/feeds/news/"
+        '("https://old.reddit.com/user/lispm/.rss"
+          "https://lispjobs.wordpress.com/feed/"
+          "https://functionaljobs.com/jobs/search/?q=lisp&format=rss"
+          "https://www.archlinux.org/feeds/news/"
           "http://planet.lisp.org/rss20.xml"
           "http://planet.emacslife.com/atom.xml")))
 
@@ -978,6 +966,8 @@ The app is chosen from your OS's preference."
   :hook (((emacs-lisp-mode
            clojure-mode
            cider-repl-mode
+           sly-mode
+           sly-mrepl-mode
            slime-mode
            slime-repl-mode
            eshell-mode
@@ -1168,28 +1158,23 @@ The app is chosen from your OS's preference."
 (use-package company-restclient         ; Company support for restclient
   :after company)
 
-(use-package ispell                     ; Word correction
- :config
- (setq ispell-really-hunspell t
-       ispell-program-name (executable-find "hunspell")
-       ispell-check-comments  t
-       ispell-dictionary "gbru"
-       ispell-local-dictionary-alist
-       '(("gbru" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_GB,ru_RU") nil utf-8))
-       ispell-hunspell-dictionary-alist ispell-local-dictionary-alist))
-
 (use-package flyspell                   ; Spell checking on-the-fly
+  :if (executable-find "hunspell")
   :hook ((text-mode . flyspell-mode)
          (prog-mode . flyspell-prog-mode))
   :config
+  (setq ispell-really-hunspell t
+        ispell-program-name (executable-find "hunspell")
+        ispell-check-comments  t
+        ispell-dictionary "gbru"
+        ispell-local-dictionary-alist
+        '(("gbru" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_GB,ru_RU") nil utf-8))
+        ispell-hunspell-dictionary-alist ispell-local-dictionary-alist)
   (setq flyspell-use-meta-tab nil
         flyspell-abbrev-p t
         ;; Make Flyspell less chatty
         flyspell-issue-welcome-flag nil
         flyspell-issue-message-flag nil)
-
-  ;; Free M-t for transpose words
-  (unbind-key "M-t" flyspell-mode-map)
   :diminish flyspell-mode)
 
 (use-package flyspell-correct-ivy
@@ -1243,8 +1228,7 @@ The app is chosen from your OS's preference."
 (use-package evil-org
   :after org
   :hook ((org-mode . evil-org-mode)
-         (evil-org-mode . (lambda ()
-                            (evil-org-set-key-theme))))
+         (evil-org-mode . evil-org-set-key-theme))
   :config
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
@@ -1394,7 +1378,10 @@ The app is chosen from your OS's preference."
           ielm-mode) . elisp-def-mode)
   :diminish elisp-def-mode)
 
-(use-package helpful)
+(use-package helpful
+  :after evil
+  :init
+  (evil-collection-define-key '(visual normal) 'emacs-lisp-mode-map "K" 'helpful-at-point))
 
 (use-package cider                      ; Clojure development environment
   :after clojure-mode
@@ -1405,7 +1392,7 @@ The app is chosen from your OS's preference."
                               (cider-repl-start))))
   :config
   (defun cider-repl-start ()
-    "Set an inititial REPL configuration."
+    "Set an initial REPL configuration."
     (interactive)
     (nrepl-send-sync-request
      (lax-plist-put
@@ -1677,9 +1664,7 @@ The app is chosen from your OS's preference."
   (defun compilation-finish-hide-buffer-on-success (buf str)
     "Could be reused by other `major-mode' after compilation.  BUF.  STR."
     (if (string-match "exited abnormally" str)
-      ;; there were errors
       (message "Compilation error, press C-x ` to visit")
-      ;; no errors, make the compilation window go away in 0.5 seconds
       (when (string-suffix-p "compilation*" (buffer-name buf))
         (bury-buffer (buffer-name buf))
         (winner-undo)
@@ -1739,8 +1724,7 @@ The app is chosen from your OS's preference."
   :config (setq ffip-use-rust-fd t))
 
 (use-package neotree
-  :bind (:map prog-mode-map
-              ("C-<tab>"   . neotree-toggle)
+  :bind (("C-<tab>"   . neotree-toggle)
          :map neotree-mode-map
               ("C-<tab>"   . neotree-toggle))
   :init
