@@ -4,6 +4,7 @@
 ;;; Commentary:
 
 ;;; Code:
+(setq lexical-binding t)
 
 ;; Turn off mouse interface early in startup to avoid momentary display
 (when (fboundp 'menu-bar-mode) (menu-bar-mode -1))
@@ -172,12 +173,16 @@
 (setq-default cursor-in-non-selected-windows t)
 
 (setq pop-up-frames nil)                ; No popup frames
+(setq pop-up-frame-function (lambda () (get-buffer-window (current-buffer))))
 (setq pop-up-windows nil)               ; No popup windows
 
 (setq frame-resize-pixelwise t ; Resize by pixels
       frame-title-format
       '(:eval (if (buffer-file-name)
                   (abbreviate-file-name (buffer-file-name)) "%b")))
+
+(setq enable-local-variables nil)
+(setq shift-select-mode nil)
 
 ;; Use `emacs-lisp-mode' instead of `lisp-interaction-mode' for scratch buffer
 (setq initial-major-mode 'emacs-lisp-mode)
@@ -252,7 +257,8 @@
   :ensure nil
   :hook (prog-mode)
   :init
-  (setq show-paren-when-point-inside-paren t
+  (setq show-paren-delay 0
+        show-paren-when-point-inside-paren t
         show-paren-when-point-in-periphery t))
 
 (use-package arc-mode
@@ -277,24 +283,25 @@
   :init
   (setq eww-header-line-format nil
         browse-url-browser-function 'browse-url-xdg-open
-        shr-width 80
-        shr-inhibit-images t ;; while Emacs crashes
+        shr-width 65
+        shr-inhibit-images t
         shr-use-colors nil
         shr-use-fonts nil)
-  :config
-  (evil-set-initial-state 'eww-bookmark-mode 'motion)
-  (evil-set-initial-state 'eww-mode 'motion))
+  (set-face-font 'variable-pitch "PT Serif-20"))
 
 (use-package calendar
   :ensure nil
   :hook (calendar-today-visible . calendar-mark-today)
+  :hook (list-diary-entries . sort-diary-entries)
   :config
   (setq calendar-date-style 'european
         calendar-standard-time-zone-name "MSK"
         calendar-latitude 55.8
         calendar-longitude 37.6
         calendar-week-start-day 1
-        calendar-holidays nil))
+        calendar-holidays nil)
+  (setq diary-mail-addr "mankaev@gmail.com"
+        number-of-diary-entries 7))
 
 (use-package woman
   :ensure nil
@@ -364,7 +371,6 @@
         mu4e-user-mail-address-list '("mankaev@gmail.com" "mankaev.i.m@sberbank.ru")
         mu4e-view-image-max-width 800
         mu4e-view-show-addresses t
-        mu4e-view-show-images nil
         mu4e-completing-read-function 'ivy-completing-read)
 
   (setq mu4e-contexts
@@ -397,7 +403,6 @@
              :vars '( ( user-mail-address            . "mankaev.i.m@sberbank.ru")
                       ( user-full-name               . "Манкаев Илья Михайлович")
                       ( mu4e-compose-signature       . (concat
-                                                        "С уважением,\n"
                                                         "Манкаев Илья Михайлович\n"
                                                         "Руководитель направления\n"
                                                         "ПАО Сбербанк (ЦА)\n"
@@ -406,7 +411,7 @@
                                                         "Управление развития платформенных сервисов кибербезопасности\n"
                                                         "Группа разработки\n\n"
                                                         "Вн.тел.: 8-557-71013.\n"
-                                                        "Россия, Москва, Новоданиловская набережная 10 стр. 1\n"))
+                                                        "Россия, Москва, Новоданиловская набережная 10 стр. 3\n"))
                       ( system-name                  . "mankaev")
                       ( mu4e-sent-messages-behavior  . sent)
                       ( epg-user-id                  . "9D9F26BEE01F94A1A78F079A61E58E5920A55728")
@@ -687,18 +692,21 @@
 (use-package flycheck-elsa)
 
 (use-package slime
+  :after (projectile evil evil-collection)
   :mode ((".sbclrc\\'" . lisp-mode))
   :bind (:map lisp-mode-map
               ([C-return] . slime-edit-definition)
-              ("M-s j"    . slime)
               ("C-l"      . slime-repl-clear-buffer))
   :hook (slime-repl-mode . (lambda ()
+                             (define-key slime-repl-mode-map (kbd "M-s") nil)
                              (setq-local browse-url-browser-function 'eww-browse-url)))
   :hook (slime-mode . (lambda ()
                         (setq-local browse-url-browser-function 'eww-browse-url)
                         (setq-local lisp-loop-indent-subclauses nil)
                         (setq-local lisp-loop-indent-forms-like-keywords t)
-                        (setq-local lisp-indent-function 'common-lisp-indent-function)))
+                        (setq-local lisp-indent-function 'common-lisp-indent-function)
+                        (setq-local company-backends '((company-slime company-yasnippet)))
+                        (turn-on-redshank-mode)))
   :init
   (setq slime-contribs '(slime-asdf
                          slime-autodoc
@@ -726,22 +734,34 @@
         (ansi-color-apply-on-region start slime-output-end))))
 
   (setq common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/"
-        slime-completion-at-point-functions 'slime-fuzzy-complete-symbol
-        slime-net-coding-system 'utf-8-unix
-        slime-startup-animation nil
-        slime-inhibit-pipelining nil
-        slime-default-lisp 'sbcl
-        slime-highlight-compiler-notes t
-        slime-kill-without-query-p t
+        lisp-loop-indent-subclauses nil
+        lisp-loop-indent-forms-like-keywords t
+        lisp-lambda-list-keyword-parameter-alignment t
         slime-autodoc-use-multiline-p t
-        slime-lisp-implementations '((sbcl  ("sbcl" "--noinform")))
+        slime-auto-select-connection 'always
+        slime-completion-at-point-functions 'slime-fuzzy-complete-symbol
+        slime-default-lisp 'sbcl
+        slime-description-autofocus t 
+        slime-fuzzy-explanation ""
+        slime-highlight-compiler-notes t
+        slime-inhibit-pipelining nil
+        slime-kill-without-query-p t
+        slime-lisp-implementations '((sbcl  ("sbcl" "--noinform" "--merge-core-pages")))
+        slime-load-failed-fasl 'always
+        slime-net-coding-system 'utf-8-unix
         slime-repl-history-remove-duplicates t
-        slime-repl-history-trim-whitespaces t))
+        slime-repl-history-trim-whitespaces t
+        slime-startup-animation nil
+        slime-when-complete-filename-expand t)
+  (evil-collection-define-key '(visual normal) 'slime-repl-mode-map "K" 'slime-describe-symbol))
 
 (use-package slime-company
   :init
   (setq slime-company-completion 'fuzzy
         slime-company-major-modes '(lisp-mode slime-repl-mode)))
+
+(use-package redshank
+  :after slime)
 
 (use-package sdcv
   :init (setq sdcv-word-pronounce nil)
@@ -1198,12 +1218,15 @@ The app is chosen from your OS's preference."
 (use-package magit                      ; The best Git client out there
   :hook (magit-post-refresh . diff-hl-magit-post-refresh) ;; Refresh `diff-hl' accordingly
   :config
-  (setq magit-save-repository-buffers 'dontask
-        magit-completing-read-function 'ivy-completing-read
-        magit-refs-show-commit-count 'all
+  (setq magit-completing-read-function 'ivy-completing-read
+        magit-delete-by-moving-to-trash nil
         magit-diff-use-overlays nil
-        magit-use-overlays nil)
-
+        magit-refs-show-commit-count 'all
+        magit-save-repository-buffers 'dontask
+        magit-use-overlays nil
+        git-commit-fill-column 65
+        git-commit-summary-max-length 65
+        git-commit-finish-query-functions nil)
   ;; Show status buffer in fullscreen
   (setq magit-display-buffer-function
         #'magit-display-buffer-fullframe-status-v1)
@@ -1276,32 +1299,32 @@ The app is chosen from your OS's preference."
      (dot . t)
      (emacs-lisp . t)
      (gnuplot . t)
+     (lisp . t)
      (plantuml . t)
      (python . t)
      (shell . t)))
-  (setq org-babel-clojure-backend 'cider
-        org-ditaa-jar-path "/usr/share/java/ditaa/ditaa-0.11.jar"
-        org-plantuml-jar-path "/usr/share/java/plantuml/plantuml.jar"
-        org-src-fontify-natively t
-        org-log-done 'time
-        org-hide-emphasis-markers t
-        org-return-follows-link t       ; Follow links by pressing ENTER on them
-        org-directory (expand-file-name "~/files/org")
-        org-default-notes-file (concat org-directory "/todo.org")
-        org-export-coding-system 'utf-8
+  (setq org-agenda-files '("~/files/org/todo.org" "~/files/org/work.org" "~/files/org/notes.org")
+        org-agenda-include-diary t
         org-agenda-span 10
-        org-agenda-start-on-weekday nil
         org-agenda-start-day "-3d"
+        org-agenda-start-on-weekday nil
         org-agenda-window-setup 'current-window
-        org-agenda-files '("~/files/org/todo.org"
-                           "~/files/org/work.org"
-                           "~/files/org/notes.org")
+        org-babel-clojure-backend 'cider
         org-confirm-babel-evaluate nil
-        org-src-tab-acts-natively t
-        org-src-preserve-indentation t
+        org-default-notes-file (concat org-directory "/todo.org")
+        org-directory (expand-file-name "~/files/org")
         org-display-inline-images t
+        org-ditaa-jar-path "/usr/share/java/ditaa/ditaa-0.11.jar"
+        org-export-coding-system 'utf-8
+        org-hide-emphasis-markers t
         org-html-inline-images t
-        org-redisplay-inline-images t)
+        org-log-done 'time
+        org-plantuml-jar-path "/usr/share/java/plantuml/plantuml.jar"
+        org-redisplay-inline-images t
+        org-return-follows-link t       ; Follow links by pressing ENTER on them
+        org-src-fontify-natively t
+        org-src-preserve-indentation t
+        org-src-tab-acts-natively t)
   (setq org-highest-priority ?A
         org-lowest-priority ?C
         org-default-priority ?A)
@@ -1538,7 +1561,7 @@ The app is chosen from your OS's preference."
   :diminish sqlup-mode)
 
 (use-package web-mode                   ; Major mode for editing web templates
-  :mode ("\\.[sx]?html?\\'" "\\.s?css\\'" "\\.xml\\'")
+  :mode ("\\.[sx]?html?\\'" "\\.s?css\\'")
   :hook (web-mode . (lambda ()
                       (when (string-equal "tsx" (file-name-extension buffer-file-name))
                         (tide-setup))
@@ -1701,7 +1724,7 @@ The app is chosen from your OS's preference."
          ("M-x"     . counsel-M-x)
          ("M-s k"   . bury-buffer)
          ("M-<tab>" . ivy-switch-buffer)
-         ("C-x C-k" . kill-this-buffer) ; Kill only the current buffer
+         ("C-x C-k" . kill-current-buffer) ; Kill only the current buffer
          :map counsel-mode-map
               ([escape] . minibuffer-keyboard-quit))
   :config
