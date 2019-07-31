@@ -27,6 +27,7 @@ export GTAGSFORCECPP=true
 export MOZ_USE_OMTP=1
 export MOZ_ACCELERATED=1
 export MOZ_WEBRENDER=1
+# export MOZ_ENABLE_WAYLAND=1
 
 export BROWSER=/usr/bin/firefox-developer-edition
 
@@ -50,6 +51,7 @@ alias gpg='torify gpg'
 alias less='less -FX'
 alias diff='diff --color=always'
 alias idris='idris --nobanner'
+alias sbcl='sbcl --noinform'
 
 function ls () {
   /usr/bin/ls "$@" --color | less -FX
@@ -57,17 +59,17 @@ function ls () {
 
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-export GDK_BACKEND=wayland
-export SDL_VIDEODRIVER=wayland
-export CLUTTER_BACKEND=wayland
-export ECORE_EVAS_ENGINE=wayland_egl
-export ELM_ENGINE=wayland_egl
-export QT_QPA_PLATFORM=wayland-egl
-export QT_DISABLE_WINDOWDECORATION=1
-export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+# export GDK_BACKEND=wayland
+# export SDL_VIDEODRIVER=wayland
+# export CLUTTER_BACKEND=wayland
+# export ECORE_EVAS_ENGINE=wayland_egl
+# export ELM_ENGINE=wayland_egl
+# export QT_QPA_PLATFORM=wayland-egl
+# export QT_DISABLE_WINDOWDECORATION=1
+# export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 # export XDG_SESSION_TYPE=wayland
-export XKB_DEFAULT_LAYOUT=us,ru
-export XKB_DEFAULT_OPTIONS=grp:caps_toggle
+# export XKB_DEFAULT_LAYOUT=us,ru
+# export XKB_DEFAULT_OPTIONS=grp:caps_toggle
 
 # for Emacs and tramp
 if [[ "$TERM" == "dumb" ]]
@@ -79,9 +81,12 @@ then
 fi
 
 # start sway
-if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
-  exec sway
-else # start tmux
-  [[ $- != *i* ]] && return
-  [[ -z "$TMUX" ]] && exec tmux
-fi
+# if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
+#   exec sway
+# else # start tmux
+#   [[ $- != *i* ]] && return
+#   [[ -z "$TMUX" ]] && exec tmux
+# fi
+
+[[ $- != *i* ]] && return
+[[ -z "$TMUX" ]] && exec tmux

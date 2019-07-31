@@ -1,9 +1,17 @@
+exec i3lock -c 3F3F3F
+
 set $mod Mod4
 
-font pango:Pragmata Pro 8
+font pango:Pragmata Pro 10
 
+default_border none
+default_floating_border none
+
+
+for_window [class=".*"] floating disable
 for_window [class=".*"] layout tabbed
 for_window [class=".*"] border none
+for_window [class=".*"] default_border none
 
 # Use Mouse+$mod to drag floating windows to their wanted position
 floating_modifier $mod
@@ -25,9 +33,6 @@ bindsym $mod+m exec --no-startup-id passmenu -fn "Pragmata Pro:size=32" -w 600 -
 
 # make screenshot
 bindsym $mod+Print exec import -window root screenshot.jpg
-
-# # enter global fullscreen mode
-# bindsym $mod+f fullscreen enable global
 
 # switch to workspace
 bindsym $mod+1 workspace 1
@@ -56,14 +61,14 @@ bindsym $mod+Shift+c reload
 # restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
 bindsym $mod+Shift+r restart
 # exit i3 (logs you out of your X session)
-bindsym $mod+Ctrl+q exec exit
+bindsym $mod+Ctrl+q  exec i3-msg exit
 
 # Increase sound volume
-bindsym XF86AudioRaiseVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') +3%
+bindsym XF86AudioRaiseVolume exec "amixer set Master 2+"
 # Decrease sound volume
-bindsym XF86AudioLowerVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') -2%
+bindsym XF86AudioLowerVolume exec "amixer set Master 3-"
 # Mute sound
-bindsym XF86AudioMute exec pactl set-sink-mute $(pacmd list-sinks |awk '/* index:/{print $3}') toggle
+bindsym XF86AudioMute exec "amixer -q sset Master toggle"
 
 # Accept phone call by adb
 bindsym XF86Explorer exec adb shell input keyevent 5
@@ -75,12 +80,12 @@ bindsym XF86LaunchA exec adb shell input keyevent 6
 bindsym XF86Search exec call_phone
 
 # Media player control key
-bindsym $mod+Ctrl+p     exec mpc toggle
-bindsym $mod+Ctrl+s     exec mpc stop
-bindsym $mod+Ctrl+Up    exec mpc prev
-bindsym $mod+Ctrl+Down  exec mpc next
-bindsym $mod+Ctrl+Left  exec mpc seek -00:00:05
-bindsym $mod+Ctrl+Right exec mpc seek +00:00:05
+bindsym $mod+Ctrl+p exec mpc toggle
+bindsym $mod+Ctrl+s exec mpc stop
+bindsym $mod+Ctrl+k exec mpc prev
+bindsym $mod+Ctrl+j exec mpc next
+bindsym $mod+Ctrl+h exec mpc seek -00:00:05
+bindsym $mod+Ctrl+l exec mpc seek +00:00:05
 
 bindsym $mod+j focus left
 bindsym $mod+k focus right
@@ -88,11 +93,14 @@ bindsym $mod+k focus right
 workspace 1 output eDP-1
 workspace 9 output HDMI-2
 
-assign [class="Emacs"]     1
-assign [class="Termite"]   2
-assign [class="Firefox"]   3
-assign [class="Inox"]      3
-assign [class="xfreerdp"]  4
-assign [class="Telegram"]  4
-assign [class="calibre"]   5
-assign [class="Psi+"]      7
+assign [class="Emacs"]       1
+assign [class="Termite"]     2
+assign [class="Firefox"]     3
+assign [class="Chromium"]    4
+assign [class="Thunderbird"] 4
+assign [class="xfreerdp"]    4
+assign [class="calibre"]     5
+assign [class="Shotwell"]    6
+assign [class="Psi+"]        7
+
+exec display -window root xc:'#2B2B2B'
