@@ -9,7 +9,7 @@ plugins=(git git-extras git-remote-branch nmap adb cp lein autojump python)
 
 source $ZSH/oh-my-zsh.sh
 
-export PATH=$HOME/bin:$HOME/.local/bin:$HOME/.cask/bin:$HOME/.luarocks/bin:$HOME/.gem/ruby/2.6.0/bin:$HOME/bin:$HOME/.cargo/bin:/usr/bin/core_perl:/usr/bin/site_perl:/usr/bin/vendor_perl:$HOME/.pear/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+export PATH=$HOME/bin:$HOME/.local/bin:$HOME/.cask/bin:$HOME/.luarocks/bin:$HOME/.gem/ruby/2.6.0/bin:$HOME/bin:$HOME/.cargo/bin:/usr/bin/core_perl:/usr/bin/site_perl:/usr/bin/vendor_perl:$HOME/.pear/bin:/opt/acl10.1express:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 export LC_ALL="en_GB.UTF-8"
 export VISUAL=emacsclient
@@ -19,10 +19,9 @@ export ALTERNATE_EDITOR=vim
 
 export PARINIT="rTbgqR B=.,?_A_a Q=_s>|"
 
-# export QEMU_AUDIO_DRV=alsa
-# export QEMU_ALSA_DAC_BUFFER_SIZE=512
-# export QEMU_ALSA_DAC_PERIOD_SIZE=170
-export QEMU_AUDIO_DRV=pa
+export QEMU_AUDIO_DRV=alsa
+export QEMU_ALSA_DAC_BUFFER_SIZE=512
+export QEMU_ALSA_DAC_PERIOD_SIZE=170
 export GTAGSFORCECPP=true
 export MOZ_USE_OMTP=1
 export MOZ_ACCELERATED=1

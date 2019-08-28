@@ -45,17 +45,18 @@
 (when (file-exists-p custom-file) (load custom-file))
 
 ;; (require 'socks)
-;; (setq url-gateway-method 'socks)
-;; (setq socks-noproxy '("localhost"))
-;; (setq socks-server '("TOR" "localhost" 9050 5))
-;; (setq socks-password "")
+;; (setq url-gateway-method 'socks
+;;       socks-noproxy '("localhost")
+;;       socks-server '("TOR" "localhost" 9050 5)
+;;       socks-password "")
 
-(setq tls-checktrust t)
-(setq gnutls-verify-error t)
-(setq gnutls-min-prime-bits 2048)
-(setq network-security-level 'medium)
-(setq nsm-save-host-names t)
-(setq tls-program '("gnutls-cli -p %p --dh-bits=2048 --ocsp --x509cafile=%t --priority='SECURE192:+SECURE128:-VERS-ALL:+VERS-TLS1.2:%%PROFILE_MEDIUM' %h" "openssl s_client -connect %h:%p -CAfile %t -no_ssl2 -no_ssl3 -ign_eof"))
+(setq tls-checktrust t
+      tls-program '("gnutls-cli -p %p --dh-bits=2048 --ocsp --x509cafile=%t --priority='SECURE192:+SECURE128:-VERS-ALL:+VERS-TLS1.3:%%PROFILE_MEDIUM' %h" "openssl s_client -connect %h:%p -CAfile %t -no_ssl2 -no_ssl3 -ign_eof")
+      gnutls-verify-error t
+      gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"
+      gnutls-min-prime-bits 2048
+      network-security-level 'medium
+      nsm-save-host-names t)
 
 (setq auth-sources '("~/.authinfo.gpg" "~/.netrc"))
 
@@ -181,7 +182,7 @@
       '(:eval (if (buffer-file-name)
                   (abbreviate-file-name (buffer-file-name)) "%b")))
 
-(setq enable-local-variables nil)
+;; (setq enable-local-variables :all)
 (setq shift-select-mode nil)
 
 ;; Use `emacs-lisp-mode' instead of `lisp-interaction-mode' for scratch buffer
@@ -221,6 +222,12 @@
         display-time-mail-string ""
         display-time-default-load-average nil)
   (display-time-mode))
+
+(use-package battery
+  :ensure nil
+  :init
+  (setq battery-mode-line-format "%b%p%%")
+  (display-battery-mode))
 
 (use-package hideshow
   :ensure nil
@@ -323,8 +330,7 @@
 
 (use-package imenu
   :ensure nil
-  :config
-  (setq imenu-auto-rescan t))
+  :config (setq imenu-auto-rescan t))
 
 (use-package sh-script                  ; Shell scripts
   :ensure nil
@@ -333,7 +339,15 @@
                      (setq-local company-backends '((company-shell)))))
   :mode ("\\.zsh\\'" . sh-mode)
   :bind (("M-s j"   . eshell-toggle))
-  :config (setq sh-basic-offset 2))     ; The offset for nested indentation
+  :init (setq sh-basic-offset 2))     ; The offset for nested indentation
+
+(use-package gnus
+  :ensure nil
+  :config
+  (require 'gnus-icalendar)
+  (setq gnus-icalendar-org-capture-file "~/files/org/todo.org")
+  (gnus-icalendar-setup)
+  (gnus-icalendar-org-setup))
 
 (use-package mu4e
   :ensure nil
@@ -382,16 +396,16 @@
                            (when msg
                              (mu4e-message-contact-field-matches msg
                                                                  :to "mankaev@gmail.com")))
-             :vars '( ( user-mail-address            . "mankaev@gmail.com")
-                      ( user-full-name               . "Ilya Mankaev")
-                      ( mu4e-compose-signature       . "Ilya Mankaev\n")
-                      ( system-name                  . "mankaev")
-                      ( mu4e-sent-messages-behavior  . delete)
-                      ( epg-user-id                  . "C71CD9843FE0986C61CC26722CBACD9B90C9D091")
-                      ( smtpmail-stream-type         . starttls)
-                      ( smtpmail-default-smtp-server . "smtp.gmail.com")
-                      ( smtpmail-smtp-server         . "smtp.gmail.com")
-                      ( smtpmail-smtp-service        . 587)))
+             :vars '((user-mail-address            . "mankaev@gmail.com")
+                     (user-full-name               . "Ilya Mankaev")
+                     (mu4e-compose-signature       . "Ilya Mankaev\n")
+                     (system-name                  . "localhost")
+                     (mu4e-sent-messages-behavior  . delete)
+                     (epg-user-id                  . "C71CD9843FE0986C61CC26722CBACD9B90C9D091")
+                     (smtpmail-stream-type         . starttls)
+                     (smtpmail-default-smtp-server . "smtp.gmail.com")
+                     (smtpmail-smtp-server         . "smtp.gmail.com")
+                     (smtpmail-smtp-service        . 587)))
            ,(make-mu4e-context
              :name "sber"
              :enter-func (lambda () (mu4e-message "Entering Sberbank context"))
@@ -400,25 +414,25 @@
                            (when msg
                              (mu4e-message-contact-field-matches msg
                                                                  :to "mankaev.i.m@sberbank.ru")))
-             :vars '( ( user-mail-address            . "mankaev.i.m@sberbank.ru")
-                      ( user-full-name               . "Манкаев Илья Михайлович")
-                      ( mu4e-compose-signature       . (concat
-                                                        "Манкаев Илья Михайлович\n"
-                                                        "Руководитель направления\n"
-                                                        "ПАО Сбербанк (ЦА)\n"
-                                                        "Блок \"Технологии\"\n"
-                                                        "Департамент ИТ блока \"Сервисы\" и безопасности\n"
-                                                        "Управление развития платформенных сервисов кибербезопасности\n"
-                                                        "Группа разработки\n\n"
-                                                        "Вн.тел.: 8-557-71013.\n"
-                                                        "Россия, Москва, Новоданиловская набережная 10 стр. 3\n"))
-                      ( system-name                  . "mankaev")
-                      ( mu4e-sent-messages-behavior  . sent)
-                      ( epg-user-id                  . "9D9F26BEE01F94A1A78F079A61E58E5920A55728")
-                      ( smtpmail-stream-type         . plain)
-                      ( smtpmail-default-smtp-server . "127.0.0.1")
-                      ( smtpmail-smtp-server         . "127.0.0.1")
-                      ( smtpmail-smtp-service        . 1025)))))
+             :vars '((user-mail-address            . "mankaev.i.m@sberbank.ru")
+                     (user-full-name               . "Манкаев Илья Михайлович")
+                     (mu4e-compose-signature       . (concat
+                                                      "Манкаев Илья Михайлович\n"
+                                                      "Руководитель направления\n"
+                                                      "ПАО Сбербанк (ЦА)\n"
+                                                      "Блок \"Технологии\"\n"
+                                                      "Департамент ИТ блока \"Сервисы\" и безопасности\n"
+                                                      "Управление развития платформенных сервисов кибербезопасности\n"
+                                                      "Группа разработки\n\n"
+                                                      "Вн.тел.: 8-557-71013.\n"
+                                                      "Россия, Москва, Новоданиловская набережная 10 стр. 3\n"))
+                     (system-name                  . "localhost")
+                     (mu4e-sent-messages-behavior  . sent)
+                     (epg-user-id                  . "9D9F26BEE01F94A1A78F079A61E58E5920A55728")
+                     (smtpmail-stream-type         . plain)
+                     (smtpmail-default-smtp-server . "127.0.0.1")
+                     (smtpmail-smtp-server         . "127.0.0.1")
+                     (smtpmail-smtp-service        . 1025)))))
 
   (setq mu4e-headers-fields '((:human-date . 8)
                               (:from . 35)
@@ -565,7 +579,7 @@
               ("C-c C-c" . projectile-compile-project)
               ([C-M-tab] . clang-format-region)
               ([C-return] . counsel-gtags-dwim))
-  :config (setq c-basic-offset 2))
+  :init (setq c-basic-offset 2))
 
 (use-package minibuffer
   :ensure nil

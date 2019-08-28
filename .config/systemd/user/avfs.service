@@ -1,0 +1,9 @@
+[Unit]
+Description=AVFS Daemon
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/avfsd %h/.avfs
+
+[Install]
+WantedBy=default.target

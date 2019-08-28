@@ -1,0 +1,10 @@
+[Match]
+Name=wlan0
+
+[Network]
+MulticastDNS=true
+DHCP=true
+
+[DHCP]
+UseDNS=true
+Anonymize=true

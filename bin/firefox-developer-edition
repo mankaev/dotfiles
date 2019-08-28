@@ -1,2 +1,0 @@
-#!/bin/bash
-GDK_BACKEND=x11 ionice -c 3 -n 7 nice -n 19 /usr/bin/firefox-developer-edition
