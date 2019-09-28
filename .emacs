@@ -174,7 +174,6 @@
 (setq-default cursor-in-non-selected-windows t)
 
 (setq pop-up-frames nil)                ; No popup frames
-(setq pop-up-frame-function (lambda () (get-buffer-window (current-buffer))))
 (setq pop-up-windows nil)               ; No popup windows
 
 (setq frame-resize-pixelwise t ; Resize by pixels
@@ -372,7 +371,7 @@
         mu4e-compose-format-flowed t
         mu4e-confirm-quit nil
         mu4e-context-policy 'pick-first
-        mu4e-get-mail-command "getmail -rgetmail_work"
+        mu4e-get-mail-command "getmail -rgetmail_home"
         mu4e-headers-auto-update t
         mu4e-headers-skip-duplicates t
         mu4e-hide-index-messages t
@@ -396,43 +395,16 @@
                            (when msg
                              (mu4e-message-contact-field-matches msg
                                                                  :to "mankaev@gmail.com")))
-             :vars '((user-mail-address            . "mankaev@gmail.com")
-                     (user-full-name               . "Ilya Mankaev")
-                     (mu4e-compose-signature       . "Ilya Mankaev\n")
-                     (system-name                  . "localhost")
-                     (mu4e-sent-messages-behavior  . delete)
-                     (epg-user-id                  . "C71CD9843FE0986C61CC26722CBACD9B90C9D091")
-                     (smtpmail-stream-type         . starttls)
-                     (smtpmail-default-smtp-server . "smtp.gmail.com")
-                     (smtpmail-smtp-server         . "smtp.gmail.com")
-                     (smtpmail-smtp-service        . 587)))
-           ,(make-mu4e-context
-             :name "sber"
-             :enter-func (lambda () (mu4e-message "Entering Sberbank context"))
-             ;; we match based on the contact-fields of the message
-             :match-func (lambda (msg)
-                           (when msg
-                             (mu4e-message-contact-field-matches msg
-                                                                 :to "mankaev.i.m@sberbank.ru")))
-             :vars '((user-mail-address            . "mankaev.i.m@sberbank.ru")
-                     (user-full-name               . "Манкаев Илья Михайлович")
-                     (mu4e-compose-signature       . (concat
-                                                      "Манкаев Илья Михайлович\n"
-                                                      "Руководитель направления\n"
-                                                      "ПАО Сбербанк (ЦА)\n"
-                                                      "Блок \"Технологии\"\n"
-                                                      "Департамент ИТ блока \"Сервисы\" и безопасности\n"
-                                                      "Управление развития платформенных сервисов кибербезопасности\n"
-                                                      "Группа разработки\n\n"
-                                                      "Вн.тел.: 8-557-71013.\n"
-                                                      "Россия, Москва, Новоданиловская набережная 10 стр. 3\n"))
-                     (system-name                  . "localhost")
-                     (mu4e-sent-messages-behavior  . sent)
-                     (epg-user-id                  . "9D9F26BEE01F94A1A78F079A61E58E5920A55728")
-                     (smtpmail-stream-type         . plain)
-                     (smtpmail-default-smtp-server . "127.0.0.1")
-                     (smtpmail-smtp-server         . "127.0.0.1")
-                     (smtpmail-smtp-service        . 1025)))))
+             :vars '( ( user-mail-address            . "mankaev@gmail.com")
+                      ( user-full-name               . "Ilya Mankaev")
+                      ( mu4e-compose-signature       . "Ilya Mankaev\n")
+                      ( system-name                  . "mankaev")
+                      ;; ( mu4e-sent-messages-behavior  . delete)
+                      ( epg-user-id                  . "C71CD9843FE0986C61CC26722CBACD9B90C9D091")
+                      ( smtpmail-stream-type         . starttls)
+                      ( smtpmail-default-smtp-server . "smtp.gmail.com")
+                      ( smtpmail-smtp-server         . "smtp.gmail.com")
+                      ( smtpmail-smtp-service        . 587)))))
 
   (setq mu4e-headers-fields '((:human-date . 8)
                               (:from . 35)
@@ -487,8 +459,9 @@
   :bind (("M-s t"   . eshell-toggle))
   :hook (eshell-mode . (lambda ()
                          (company-mode)
-                         (setq-local company-backends '((company-shell company-files)))
-                         (setq-local company-idle-delay 0.1)
+                         (setq-local company-backends '((company-capf
+                                                         company-files)))
+                         (setq-local company-idle-delay 0.7)
                          ;; Hack to define key in eshell-mode
                          (define-key eshell-mode-map (kbd "M-s") nil)
                          (define-key eshell-mode-map (kbd "M-s t") 'eshell-toggle)
@@ -556,9 +529,9 @@
 (use-package abbrev
   :ensure nil
   :config
-  (setq abbrev-file-name (expand-file-name ".abbrev_defs" user-emacs-directory))
-  (setq save-abbrevs 'silently)
   (setq-default abbrev-mode t)
+  (setq abbrev-file-name (expand-file-name ".abbrev_defs" user-emacs-directory)
+        save-abbrevs 'silently)
   (if (file-exists-p abbrev-file-name)
       (quietly-read-abbrev-file))
   :diminish abbrev-mode)
@@ -691,6 +664,7 @@
 
 (use-package elisp-mode                 ; Emacs Lisp editing
   :ensure nil
+  :after (elsa flycheck-elsa)
   :mode ("Cask\\'" . emacs-lisp-mode)
   :hook ((emacs-lisp-mode . (lambda ()
                               (flycheck-elsa-setup)
@@ -703,12 +677,13 @@
   :interpreter ("emacs" . emacs-lisp-mode))
 
 (use-package elsa)
+
 (use-package flycheck-elsa)
 
 (use-package slime
   :after (projectile evil evil-collection)
   :mode ((".sbclrc\\'" . lisp-mode))
-  :bind (:map lisp-mode-map
+  :bind (:map slime-mode-map
               ([C-return] . slime-edit-definition)
               ("C-l"      . slime-repl-clear-buffer))
   :hook (slime-repl-mode . (lambda ()
@@ -717,13 +692,13 @@
   :hook (slime-mode . (lambda ()
                         (setq-local browse-url-browser-function 'eww-browse-url)
                         (setq-local lisp-loop-indent-subclauses nil)
+                        (setq-local lisp-lambda-list-keyword-parameter-alignment t)
                         (setq-local lisp-loop-indent-forms-like-keywords t)
                         (setq-local lisp-indent-function 'common-lisp-indent-function)
                         (setq-local company-backends '((company-slime company-yasnippet)))
                         (turn-on-redshank-mode)))
   :init
   (setq slime-contribs '(slime-asdf
-                         slime-autodoc
                          slime-company
                          slime-compiler-notes-tree
                          slime-fancy
@@ -748,10 +723,6 @@
         (ansi-color-apply-on-region start slime-output-end))))
 
   (setq common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/"
-        lisp-loop-indent-subclauses nil
-        lisp-loop-indent-forms-like-keywords t
-        lisp-lambda-list-keyword-parameter-alignment t
-        slime-autodoc-use-multiline-p t
         slime-auto-select-connection 'always
         slime-completion-at-point-functions 'slime-fuzzy-complete-symbol
         slime-default-lisp 'sbcl
@@ -793,14 +764,14 @@
           "https://functionaljobs.com/jobs/search/?q=lisp&format=rss"
           "https://www.archlinux.org/feeds/news/"
           "http://planet.lisp.org/rss20.xml"
-          "http://planet.emacslife.com/atom.xml")))
+          "http://planet.emacslife.com/atom.xml")
+        elfeed-use-curl nil))
 
 (use-package vc-hooks                   ; Simple version control
   :ensure nil
   :config
-  (setq vc-handled-backends '(Git))     ; Enable only Git
-  ;; Always follow symlinks to files in VCS repos
-  (setq vc-follow-symlinks t))
+  (setq vc-handled-backends '(Git)      ; Enable only Git
+        vc-follow-symlinks t))          ; Always follow symlinks to files in VCS repos
 
 (use-package dired                      ; File manager
   :after evil
@@ -883,10 +854,17 @@ The app is chosen from your OS's preference."
 ;;; Installed Packages
 
 ;; Theme
-(use-package zenburn-theme              ; Default theme
+;; (use-package zenburn-theme              ; Default theme
+;;   :init
+;;   (setq custom-safe-themes t)           ; Treat themes as safe
+;;   (load-theme 'zenburn 'no-confirm))
+
+(use-package spacemacs-theme
   :init
   (setq custom-safe-themes t)           ; Treat themes as safe
-  (load-theme 'zenburn 'no-confirm))
+  (setq spacemacs-theme-comment-italic t
+        spacemacs-theme-comment-bg nil)
+  (load-theme 'spacemacs-light 'no-confirm))
 
 (use-package racket-mode                ; Racket language mode
   :mode "\\.rkt\\'"
@@ -966,7 +944,7 @@ The app is chosen from your OS's preference."
   :hook (after-init . doom-modeline-mode)
   :init
   (setq doom-modeline-buffer-file-name-style 'file-name
-        doom-modeline-height 35
+        doom-modeline-height 33
         doom-modeline-bar-width 10
         doom-modeline-icon nil
         doom-modeline-major-mode-icon nil)
@@ -1314,9 +1292,16 @@ The app is chosen from your OS's preference."
      (emacs-lisp . t)
      (gnuplot . t)
      (lisp . t)
+     (sql . t)
      (plantuml . t)
      (python . t)
      (shell . t)))
+  (dolist (face '(org-level-1
+                  org-level-2
+                  org-level-3
+                  org-level-4
+                  org-level-5))
+    (set-face-attribute face nil :weight 'semi-bold :height 1.0))
   (setq org-agenda-files '("~/files/org/todo.org" "~/files/org/work.org" "~/files/org/notes.org")
         org-agenda-include-diary t
         org-agenda-span 10
@@ -1472,6 +1457,7 @@ The app is chosen from your OS's preference."
   (require 'clojure-mode)
   (define-clojure-indent
     (defroutes 'defun)
+    (defrecord 2)
     (GET 2)
     (POST 2)
     (PUT 2)
@@ -1788,7 +1774,7 @@ The app is chosen from your OS's preference."
   (setq ivy-use-virtual-buffers t    ; add ‘recentf-mode’ and bookmarks to ‘ivy-switch-buffer’.
         ivy-wrap t
         ivy-height 17                ; number of result lines to display
-        ivy-count-format ""          ; does not count candidates
+        ivy-count-format "(%d/%d) "  ; does not count candidates
         ivy-initial-inputs-alist nil ; no regexp by default
         ivy-re-builders-alist        ; configure regexp engine.
         '((t . ivy--regex-plus)))    ; allow input not in order

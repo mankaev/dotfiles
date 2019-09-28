@@ -2,5 +2,5 @@ Xft.antialias                 :true
 Xft.lcdfilter                 :lcddefault
 Xcursor.size                  :22
 
-Xcursor.theme: Adwaita
-emacs.font: Pragmata Pro-18
+Xcursor.theme:                Adwaita
+emacs.font:                   Pragmata Pro Mono-18
