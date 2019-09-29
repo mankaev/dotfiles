@@ -337,7 +337,8 @@
                      (flycheck-mode)
                      (setq-local company-backends '((company-shell)))))
   :mode ("\\.zsh\\'" . sh-mode)
-  :bind (("M-s j"   . eshell-toggle))
+  :bind (:map sh-mode-map
+              ("M-s j"   . eshell-toggle))
   :init (setq sh-basic-offset 2))     ; The offset for nested indentation
 
 (use-package gnus
@@ -653,8 +654,8 @@
 (use-package sql                        ; SQL editing and REPL
   :ensure nil
   :mode ("\\.sql\\'" . sql-mode)
-  :bind (:map sql-mode-map
-         ("C-c m p" . sql-set-product)))
+  :hook (sql-interactive-mode . (lambda ()
+                                  (toggle-truncate-lines t))))
 
 (use-package ielm-mode
   :ensure nil
@@ -664,25 +665,25 @@
 
 (use-package elisp-mode                 ; Emacs Lisp editing
   :ensure nil
-  :after (elsa flycheck-elsa)
-  :mode ("Cask\\'" . emacs-lisp-mode)
+  :bind (:map emacs-lisp-mode-map
+              ([C-return] . elisp-def)
+              ("C-c C-c"  . compile-defun)
+              ("M-s j"    . projectile-run-ielm))
   :hook ((emacs-lisp-mode . (lambda ()
+                              (elsa-setup-font-lock)
                               (flycheck-elsa-setup)
                               (setq-local company-backends '((company-capf)))))
          (ielm-mode . (lambda ()
                         (setq-local comint-input-ring-file-name "~/.emacs.d/.ielm-input.hist"))))
-  :bind (:map emacs-lisp-mode-map
-              ([C-return] . elisp-def)
-              ("M-s j"    . projectile-run-ielm))
   :interpreter ("emacs" . emacs-lisp-mode))
 
 (use-package elsa)
-
+(use-package cask)
 (use-package flycheck-elsa)
 
 (use-package slime
   :after (projectile evil evil-collection)
-  :mode ((".sbclrc\\'" . lisp-mode))
+  :mode ((".sbclrc\\'" . common-lisp-mode))
   :bind (:map slime-mode-map
               ([C-return] . slime-edit-definition)
               ("C-l"      . slime-repl-clear-buffer))
@@ -743,7 +744,7 @@
 (use-package slime-company
   :init
   (setq slime-company-completion 'fuzzy
-        slime-company-major-modes '(lisp-mode slime-repl-mode)))
+        slime-company-major-modes '(common-lisp-mode slime-repl-mode)))
 
 (use-package redshank
   :after slime)
@@ -1311,6 +1312,7 @@ The app is chosen from your OS's preference."
         org-babel-clojure-backend 'cider
         org-confirm-babel-evaluate nil
         org-default-notes-file (concat org-directory "/todo.org")
+        org-descriptive-links nil
         org-directory (expand-file-name "~/files/org")
         org-display-inline-images t
         org-ditaa-jar-path "/usr/share/java/ditaa/ditaa-0.11.jar"
