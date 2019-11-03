@@ -364,6 +364,10 @@
                                 (epa-mail-mode)))
          (mu4e-view-mode . epa-mail-mode))
   :config
+  ;; (setq mu4e-view-use-gnus t)
+  (require 'mu4e-icalendar)
+  (require 'mu4e)
+  (mu4e-icalendar-setup)
   (setq mu4e-maildir "~/mail"
         mu4e-attachment-dir "~/tmp"
         mu4e-auto-retrieve-keys t
@@ -689,14 +693,16 @@
               ("C-l"      . slime-repl-clear-buffer))
   :hook (slime-repl-mode . (lambda ()
                              (define-key slime-repl-mode-map (kbd "M-s") nil)
+                             (setq-local company-backends '((company-slime company-yasnippet)))
                              (setq-local browse-url-browser-function 'eww-browse-url)))
   :hook (slime-mode . (lambda ()
                         (setq-local browse-url-browser-function 'eww-browse-url)
-                        (setq-local lisp-loop-indent-subclauses nil)
+                        (setq-local company-backends '((company-slime company-yasnippet)))
+                        (setq-local lisp-indent-function 'common-lisp-indent-function)
                         (setq-local lisp-lambda-list-keyword-parameter-alignment t)
                         (setq-local lisp-loop-indent-forms-like-keywords t)
-                        (setq-local lisp-indent-function 'common-lisp-indent-function)
-                        (setq-local company-backends '((company-slime company-yasnippet)))
+                        (setq-local lisp-loop-indent-subclauses nil)
+                        (eldoc-mode -1)
                         (turn-on-redshank-mode)))
   :init
   (setq slime-contribs '(slime-asdf
@@ -744,7 +750,7 @@
 (use-package slime-company
   :init
   (setq slime-company-completion 'fuzzy
-        slime-company-major-modes '(common-lisp-mode slime-repl-mode)))
+        slime-company-major-modes '(lisp-mode slime-repl-mode)))
 
 (use-package redshank
   :after slime)
@@ -843,6 +849,17 @@ The app is chosen from your OS's preference."
   (dired-async-mode t)
   (evil-set-initial-state 'image-mode 'emacs))
 
+;; Dired hacks
+(use-package dired-hacks-utils)
+(use-package dired-filter
+  :hook (dired-mode . dired-filter-mode)
+  :init (setq dired-filter-stack nil))
+(use-package dired-collapse
+  :hook (dired-mode . dired-collapse-mode))
+(use-package dired-ranger)
+
+(use-package dired-imenu)
+
 (use-package uniquify                   ; Unique buffer names
   :ensure nil
   :config
@@ -855,11 +872,6 @@ The app is chosen from your OS's preference."
 ;;; Installed Packages
 
 ;; Theme
-;; (use-package zenburn-theme              ; Default theme
-;;   :init
-;;   (setq custom-safe-themes t)           ; Treat themes as safe
-;;   (load-theme 'zenburn 'no-confirm))
-
 (use-package spacemacs-theme
   :init
   (setq custom-safe-themes t)           ; Treat themes as safe
@@ -877,12 +889,6 @@ The app is chosen from your OS's preference."
   :bind (:map racket-mode-map
               ("M-s j" . racket-run)))
 
-(use-package auto-package-update
-  :config
-  (setq auto-package-update-delete-old-versions t
-        auto-package-update-hide-results t)
-  (auto-package-update-maybe))
-
 (use-package evil
   :hook (after-init . evil-mode)
   :bind (:map evil-normal-state-map
@@ -891,14 +897,7 @@ The app is chosen from your OS's preference."
               ("C-SPC"  . avy-goto-line)
               ([escape] . keyboard-quit)
          :map evil-operator-state-map
-              ("S-SPC"  . avy-goto-char)
-              ("SPC"    . avy-goto-word-1)
-              ("C-SPC"  . avy-goto-line)
               ([escape] . evil-normal-state)
-         :map evil-window-map
-              ("u" . winner-undo)
-              ("d" . kill-buffer)
-              ("D" . kill-buffer-and-window)
          :map evil-emacs-state-map
               ([escape] . evil-normal-state)
          :map evil-visual-state-map
@@ -906,15 +905,13 @@ The app is chosen from your OS's preference."
          :map evil-motion-state-map
               ([escape] . evil-normal-state))
   :init
-  (setq evil-emacs-state-cursor '("red" box))
-  (setq evil-normal-state-cursor '("red" box))
-  (setq evil-visual-state-cursor '("orange" box))
-  (setq evil-insert-state-cursor '("red" bar))
-  (setq evil-replace-state-cursor '("red" bar))
-  (setq evil-operator-state-cursor '("red" hollow))
-
+  (setq evil-emacs-state-cursor '("red" box)
+        evil-normal-state-cursor '("red" box)
+        evil-visual-state-cursor '("orange" box)
+        evil-insert-state-cursor '("red" bar)
+        evil-replace-state-cursor '("red" bar)
+        evil-operator-state-cursor '("red" hollow))
   (setq evil-want-keybinding nil
-        evil-default-cursor t           ; Do not overwrite cursor colour
         evil-cross-lines t
         evil-move-beyond-eol t
         evil-want-fine-undo t))
@@ -1133,8 +1130,7 @@ The app is chosen from your OS's preference."
 (use-package markdown-mode              ; Edit markdown files
   :hook (markdown-mode . auto-fill-mode)
   :mode "\\.md\\'"
-  :config
-  (setq markdown-fontify-code-blocks-natively t))
+  :config (setq markdown-fontify-code-blocks-natively t))
 
 (use-package autorevert
   :config
@@ -1191,7 +1187,7 @@ The app is chosen from your OS's preference."
   :diminish flyspell-mode)
 
 (use-package flyspell-correct-ivy
-  :after flyspell
+  :after (flyspell ivy)
   :bind (:map flyspell-mode-map
               ("C-;" . flyspell-correct-word-generic)))
 
@@ -1521,23 +1517,6 @@ The app is chosen from your OS's preference."
 
 (use-package hy-mode)                   ; Hy language mode
 
-(use-package lsp-mode
-  :init (setq lsp-inhibit-message t))
-
-(use-package company-lsp)
-
-(use-package lsp-ui)
-
-(use-package lsp-java
-  :after lsp
-  :hook (java-mode . lsp))
-
-(use-package dap-mode
-  :after lsp-mode
-  :config
-  (dap-mode t)
-  (dap-ui-mode t))
-
 (use-package yasnippet                  ; Snippets
   :hook (prog-mode . yas-minor-mode)
   :config
@@ -1572,8 +1551,6 @@ The app is chosen from your OS's preference."
                       (require 'company-web-html)
                       (setq-local company-backends '((company-web-html company-css)))))
   :config
-  (set-face-background 'web-mode-current-element-highlight-face "grey40")
-
   (setq web-mode-enable-auto-pairing t
         web-mode-enable-auto-closing t
         web-mode-enable-css-colorization t
@@ -1781,6 +1758,7 @@ The app is chosen from your OS's preference."
         ivy-re-builders-alist        ; configure regexp engine.
         '((t . ivy--regex-plus)))    ; allow input not in order
   (ivy-mode)
+  (ivy-configure 'counsel-imenu :update-fn 'auto)
   :diminish ivy-mode)
 
 (use-package mu4e-alert
