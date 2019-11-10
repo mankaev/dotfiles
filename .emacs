@@ -134,8 +134,8 @@
 (defun risky-local-variable-p (&rest args) "Local variables. no ARGS." nil)
 
 ;; Fonts used:
-(add-to-list 'default-frame-alist '(font . "Pragmata Pro-18"))
-
+(add-to-list 'default-frame-alist '(font . "Pragmata Pro Mono-18"))
+(setq font-lock-maximum-decoration t)
 ;; Prevent emacs from creating a backup file filename~
 (setq make-backup-files nil)
 
@@ -174,6 +174,7 @@
 (setq-default cursor-in-non-selected-windows t)
 
 (setq pop-up-frames nil)                ; No popup frames
+(setq pop-up-frame-function (lambda () (selected-frame)))
 (setq pop-up-windows nil)               ; No popup windows
 
 (setq frame-resize-pixelwise t ; Resize by pixels
@@ -384,7 +385,7 @@
         mu4e-sent-folder "/"
         mu4e-split-view 'same-window
         mu4e-update-interval 180
-        mu4e-user-agent-string "emacs"
+        mu4e-user-agent-string "Emacs"
         mu4e-headers-include-related nil
         mu4e-user-mail-address-list '("mankaev@gmail.com" "mankaev.i.m@sberbank.ru")
         mu4e-view-image-max-width 800
@@ -529,6 +530,7 @@
   ;; Enable Eldoc for `eval-expression', too
   (setq-default eldoc-documentation-function #'describe-char-eldoc)
   (setq eldoc-idle-delay 0.1)  ; Show eldoc more promptly
+  (global-eldoc-mode -1)
   :diminish eldoc-mode)
 
 (use-package abbrev
@@ -681,99 +683,6 @@
                         (setq-local comint-input-ring-file-name "~/.emacs.d/.ielm-input.hist"))))
   :interpreter ("emacs" . emacs-lisp-mode))
 
-(use-package elsa)
-(use-package cask)
-(use-package flycheck-elsa)
-
-(use-package slime
-  :after (projectile evil evil-collection)
-  :mode ((".sbclrc\\'" . common-lisp-mode))
-  :bind (:map slime-mode-map
-              ([C-return] . slime-edit-definition)
-              ("C-l"      . slime-repl-clear-buffer))
-  :hook (slime-repl-mode . (lambda ()
-                             (define-key slime-repl-mode-map (kbd "M-s") nil)
-                             (setq-local company-backends '((company-slime company-yasnippet)))
-                             (setq-local browse-url-browser-function 'eww-browse-url)))
-  :hook (slime-mode . (lambda ()
-                        (setq-local browse-url-browser-function 'eww-browse-url)
-                        (setq-local company-backends '((company-slime company-yasnippet)))
-                        (setq-local lisp-indent-function 'common-lisp-indent-function)
-                        (setq-local lisp-lambda-list-keyword-parameter-alignment t)
-                        (setq-local lisp-loop-indent-forms-like-keywords t)
-                        (setq-local lisp-loop-indent-subclauses nil)
-                        (eldoc-mode -1)
-                        (turn-on-redshank-mode)))
-  :init
-  (setq slime-contribs '(slime-asdf
-                         slime-company
-                         slime-compiler-notes-tree
-                         slime-fancy
-                         slime-hyperdoc
-                         slime-indentation
-                         slime-macrostep
-                         slime-mdot-fu
-                         slime-presentations
-                         slime-quicklisp
-                         slime-references
-                         slime-sbcl-exts
-                         slime-repl
-                         slime-sprof
-                         slime-tramp
-                         slime-xref-browser
-                         inferior-slime))
-
-  (defadvice slime-repl-emit (around slime-repl-ansi-colorize activate compile)
-    (with-current-buffer (slime-output-buffer)
-      (let ((start slime-output-start))
-        (setq ad-return-value ad-do-it)
-        (ansi-color-apply-on-region start slime-output-end))))
-
-  (setq common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/"
-        slime-auto-select-connection 'always
-        slime-completion-at-point-functions 'slime-fuzzy-complete-symbol
-        slime-default-lisp 'sbcl
-        slime-description-autofocus t 
-        slime-fuzzy-explanation ""
-        slime-highlight-compiler-notes t
-        slime-inhibit-pipelining nil
-        slime-kill-without-query-p t
-        slime-lisp-implementations '((sbcl  ("sbcl" "--noinform" "--merge-core-pages")))
-        slime-load-failed-fasl 'always
-        slime-net-coding-system 'utf-8-unix
-        slime-repl-history-remove-duplicates t
-        slime-repl-history-trim-whitespaces t
-        slime-startup-animation nil
-        slime-when-complete-filename-expand t)
-  (evil-collection-define-key '(visual normal) 'slime-repl-mode-map "K" 'slime-describe-symbol))
-
-(use-package slime-company
-  :init
-  (setq slime-company-completion 'fuzzy
-        slime-company-major-modes '(lisp-mode slime-repl-mode)))
-
-(use-package redshank
-  :after slime)
-
-(use-package sdcv
-  :init (setq sdcv-word-pronounce nil)
-  :config
-  (evil-set-initial-state 'sdcv-mode 'normal)
-  (evil-collection-define-key 'normal 'sdcv-mode-map "q" 'sdcv-quit)
-  (evil-collection-define-key '(visual normal) 'sdcv-mode-map (kbd "C-j") 'sdcv-next-dictionary)
-  (evil-collection-define-key '(visual normal) 'sdcv-mode-map (kbd "C-k") 'sdcv-previous-dictionary))
-
-(use-package elfeed
-  :init
-  (setq elfeed-feeds
-        '("https://old.reddit.com/user/lispm/.rss"
-          "https://lispjobs.wordpress.com/feed/"
-          "https://functionaljobs.com/jobs/search/?q=lisp&format=rss"
-          "https://www.archlinux.org/feeds/news/"
-          "http://planet.lisp.org/rss20.xml"
-          "http://planet.emacslife.com/atom.xml")
-        elfeed-use-curl nil))
-
 (use-package vc-hooks                   ; Simple version control
   :ensure nil
   :config
@@ -848,17 +757,6 @@ The app is chosen from your OS's preference."
         dired-ls-F-marks-symlinks t)
   (dired-async-mode t)
   (evil-set-initial-state 'image-mode 'emacs))
-
-;; Dired hacks
-(use-package dired-hacks-utils)
-(use-package dired-filter
-  :hook (dired-mode . dired-filter-mode)
-  :init (setq dired-filter-stack nil))
-(use-package dired-collapse
-  :hook (dired-mode . dired-collapse-mode))
-(use-package dired-ranger)
-
-(use-package dired-imenu)
 
 (use-package uniquify                   ; Unique buffer names
   :ensure nil
@@ -1514,6 +1412,114 @@ The app is chosen from your OS's preference."
 
 (use-package clojure-snippets           ; Yasnippets for Clojure
   :after (yasnippet clojure-mode))
+
+(use-package elsa)
+(use-package cask)
+(use-package flycheck-elsa)
+
+(use-package slime
+  :after (projectile evil evil-collection)
+  :mode ((".sbclrc\\'" . common-lisp-mode))
+  :bind (:map slime-mode-map
+              ([C-return] . slime-edit-definition)
+              ("C-l"      . slime-repl-clear-buffer))
+        ;; (:map slime-repl-mode-map
+        ;;       ("M-s h"    . counsel-slime-repl-history))
+  :hook (slime-repl-mode . (lambda ()
+                             (define-key slime-repl-mode-map (kbd "M-s") nil)
+                             (setq-local company-backends '((company-slime company-yasnippet)))
+                             (setq-local browse-url-browser-function 'eww-browse-url)))
+  :hook (slime-mode . (lambda ()
+                        (setq-local browse-url-browser-function 'eww-browse-url)
+                        (setq-local company-backends '((company-slime company-yasnippet)))
+                        (setq-local lisp-indent-function 'common-lisp-indent-function)
+                        (setq-local lisp-lambda-list-keyword-parameter-alignment t)
+                        (setq-local lisp-loop-indent-forms-like-keywords t)
+                        (setq-local lisp-loop-indent-subclauses nil)
+                        (eldoc-mode -1)
+                        (turn-on-redshank-mode)))
+  :init
+  (setq slime-contribs '(slime-asdf
+                         slime-company
+                         slime-compiler-notes-tree
+                         slime-fancy
+                         slime-hyperdoc
+                         slime-indentation
+                         slime-macrostep
+                         slime-mdot-fu
+                         slime-presentations
+                         slime-quicklisp
+                         slime-references
+                         slime-sbcl-exts
+                         slime-repl
+                         slime-sprof
+                         slime-tramp
+                         slime-xref-browser
+                         inferior-slime))
+
+  (defadvice slime-repl-emit (around slime-repl-ansi-colorize activate compile)
+    (with-current-buffer (slime-output-buffer)
+      (let ((start slime-output-start))
+        (setq ad-return-value ad-do-it)
+        (ansi-color-apply-on-region start slime-output-end))))
+
+  (setq common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/"
+        slime-auto-select-connection 'always
+        slime-completion-at-point-functions 'slime-fuzzy-complete-symbol
+        slime-default-lisp 'sbcl
+        slime-description-autofocus t 
+        slime-fuzzy-explanation ""
+        slime-highlight-compiler-notes t
+        slime-inhibit-pipelining nil
+        slime-kill-without-query-p t
+        slime-lisp-implementations '((sbcl  ("sbcl" "--noinform" "--merge-core-pages")))
+        slime-load-failed-fasl 'always
+        slime-net-coding-system 'utf-8-unix
+        slime-repl-history-remove-duplicates t
+        slime-repl-history-trim-whitespaces t
+        slime-startup-animation nil
+        slime-when-complete-filename-expand t)
+  (evil-collection-define-key '(visual normal) 'slime-repl-mode-map "K" 'slime-describe-symbol))
+
+(use-package slime-company
+  :init
+  (setq slime-company-completion 'fuzzy
+        slime-company-major-modes '(lisp-mode slime-repl-mode)))
+
+(use-package redshank
+  :after slime)
+
+(use-package dockerfile-mode)
+
+(use-package sdcv
+  :init (setq sdcv-word-pronounce nil)
+  :config
+  (evil-set-initial-state 'sdcv-mode 'normal)
+  (evil-collection-define-key 'normal 'sdcv-mode-map "q" 'kill-buffer-and-window)
+  (evil-collection-define-key '(visual normal) 'sdcv-mode-map (kbd "C-j") 'sdcv-next-dictionary)
+  (evil-collection-define-key '(visual normal) 'sdcv-mode-map (kbd "C-k") 'sdcv-previous-dictionary))
+
+(use-package elfeed
+  :init
+  (setq elfeed-feeds
+        '("https://old.reddit.com/user/lispm/.rss"
+          "https://lispjobs.wordpress.com/feed/"
+          "https://functionaljobs.com/jobs/search/?q=lisp&format=rss"
+          "https://www.archlinux.org/feeds/news/"
+          "http://planet.lisp.org/rss20.xml"
+          "http://planet.emacslife.com/atom.xml")
+        elfeed-use-curl nil))
+
+;; Dired hacks
+(use-package dired-hacks-utils)
+(use-package dired-filter
+  :hook (dired-mode . dired-filter-mode)
+  :init (setq dired-filter-stack nil))
+(use-package dired-collapse
+  :hook (dired-mode . dired-collapse-mode))
+(use-package dired-ranger)
+
+(use-package dired-imenu)
 
 (use-package hy-mode)                   ; Hy language mode
 
