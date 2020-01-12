@@ -310,10 +310,6 @@
   (setq diary-mail-addr "mankaev@gmail.com"
         number-of-diary-entries 7))
 
-(use-package woman
-  :ensure nil
-  :bind (("M-s m"   . woman)))
-
 (use-package proced-mode
   :ensure nil
   :init
@@ -387,7 +383,7 @@
         mu4e-update-interval 180
         mu4e-user-agent-string "Emacs"
         mu4e-headers-include-related nil
-        mu4e-user-mail-address-list '("mankaev@gmail.com" "mankaev.i.m@sberbank.ru")
+        mu4e-user-mail-address-list '("mankaev@gmail.com")
         mu4e-view-image-max-width 800
         mu4e-view-show-addresses t
         mu4e-completing-read-function 'ivy-completing-read)
@@ -821,10 +817,6 @@ The app is chosen from your OS's preference."
   :after evil
   :bind ("M-;" . evilnc-comment-or-uncomment-lines))
 
-(use-package evil-surround
-  :after evil
-  :hook (prog-mode . evil-surround-mode))
-
 (use-package evil-collection
   :after evil
   :init
@@ -980,7 +972,8 @@ The app is chosen from your OS's preference."
   (setq undo-tree-visualizer-diff t
         undo-tree-auto-save-history t
         undo-tree-visualizer-timestamps t
-        undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo")))
+        undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo"))
+        undo-limit 134217728)
   (global-undo-tree-mode)
   :diminish undo-tree-mode)
 
@@ -1187,6 +1180,7 @@ The app is chosen from your OS's preference."
      (emacs-lisp . t)
      (gnuplot . t)
      (lisp . t)
+     (scheme . t)
      (sql . t)
      (plantuml . t)
      (python . t)
@@ -1197,12 +1191,18 @@ The app is chosen from your OS's preference."
                   org-level-4
                   org-level-5))
     (set-face-attribute face nil :weight 'semi-bold :height 1.0))
+  (require 'org-crypt)
+  (org-crypt-use-before-save-magic)
   (setq org-agenda-files '("~/files/org/todo.org" "~/files/org/work.org" "~/files/org/notes.org")
         org-agenda-include-diary t
         org-agenda-span 10
         org-agenda-start-day "-3d"
         org-agenda-start-on-weekday nil
         org-agenda-window-setup 'current-window
+        org-agenda-compact-blocks t
+        org-crypt-disable-auto-save 'encrypt
+        org-crypt-key "C71CD9843FE0986C61CC26722CBACD9B90C9D091"
+        org-tags-exclude-from-inheritance (quote ("crypt"))
         org-babel-clojure-backend 'cider
         org-confirm-babel-evaluate nil
         org-default-notes-file (concat org-directory "/todo.org")
@@ -1219,7 +1219,8 @@ The app is chosen from your OS's preference."
         org-return-follows-link t       ; Follow links by pressing ENTER on them
         org-src-fontify-natively t
         org-src-preserve-indentation t
-        org-src-tab-acts-natively t)
+        org-src-tab-acts-natively t
+        org-src-window-setup 'current-window)
   (setq org-highest-priority ?A
         org-lowest-priority ?C
         org-default-priority ?A)
@@ -1273,7 +1274,10 @@ The app is chosen from your OS's preference."
   :init
   (require 'ob-async)
   (setq ob-async-no-async-languages-alist '("ipython")))
- 
+
+(use-package ox-reveal
+  :config (require 'ox-reveal))
+
 (use-package gnuplot)
 
 (use-package gnuplot-mode)
@@ -1766,6 +1770,8 @@ The app is chosen from your OS's preference."
   (ivy-mode)
   (ivy-configure 'counsel-imenu :update-fn 'auto)
   :diminish ivy-mode)
+
+(use-package guix)
 
 (use-package mu4e-alert
   :after mu4e
