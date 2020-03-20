@@ -4,31 +4,11 @@
 ;;; Commentary:
 
 ;;; Code:
-(setq lexical-binding t)
+(let ((minver "26.1"))
+  (when (version< emacs-version minver)
+    (error "This config requires >=%s version of Emacs" minver)))
 
-;; Turn off mouse interface early in startup to avoid momentary display
-(when (fboundp 'menu-bar-mode) (menu-bar-mode -1))
-(when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
-(when (fboundp 'fringe-mode) (fringe-mode '(10 . 0)))
-(when (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
-(when (fboundp 'horizontal-scroll-bar-mode) (horizontal-scroll-bar-mode -1))
-
-;;; Package setup
-(require 'package)
-(setq package-enable-at-startup nil
-      package--init-file-ensured t)
-(setq package-archives '(("gnu"          . "https://elpa.gnu.org/packages/")
-                         ("melpa"        . "https://melpa.org/packages/")
-                         ("melpa-stable" . "https://stable.melpa.org/packages/")
-                         ("org"          . "http://orgmode.org/elpa/")))
-(package-initialize)
-
-(setq load-prefer-newer t)              ; Always load newer compiled files
-(setq ad-redefinition-action 'accept)   ; Silence advice redefinition warnings
-(setq message-log-max 10000)            ; Debugging
-
-;; Allow more than 800Kb cache during init
-(setq gc-cons-threshold 50000000)
+(setq gc-cons-threshold most-positive-fixnum)
 
 (defvar my-file-name-handler-alist file-name-handler-alist)
 (setq file-name-handler-alist nil)
@@ -41,14 +21,38 @@
                   file-name-handler-alist my-file-name-handler-alist)
             (kill-buffer "*scratch*")))
 
+;;; Package setup
+(setq package-enable-at-startup nil)
+(advice-add #'package--ensure-init-file :override #'ignore)
+
+;; Turn off mouse interface early in startup to avoid momentary display
+(when (fboundp 'menu-bar-mode) (menu-bar-mode -1))
+(when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(when (fboundp 'fringe-mode) (fringe-mode '(10 . 0)))
+(when (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+(when (fboundp 'horizontal-scroll-bar-mode) (horizontal-scroll-bar-mode -1))
+
+(setq frame-inhibit-implied-resize t)
+(advice-add #'x-apply-session-resources :override #'ignore)
+
+(setq package-archives '(("gnu"          . "https://elpa.gnu.org/packages/")
+                         ("melpa"        . "https://melpa.org/packages/")
+                         ("melpa-stable" . "https://stable.melpa.org/packages/")
+                         ("org"          . "http://orgmode.org/elpa/")))
+(package-initialize)
+
+(setq load-prefer-newer t)              ; Always load newer compiled files
+(setq ad-redefinition-action 'accept)   ; Silence advice redefinition warnings
+(setq message-log-max 10000)            ; Debugging
+
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file) (load custom-file))
 
-;; (require 'socks)
-;; (setq url-gateway-method 'socks
-;;       socks-noproxy '("localhost")
-;;       socks-server '("TOR" "localhost" 9050 5)
-;;       socks-password "")
+(require 'socks)
+(setq url-gateway-method 'socks
+      socks-noproxy '("localhost")
+      socks-server '("TOR" "localhost" 9050 5)
+      socks-password "")
 
 (setq tls-checktrust t
       tls-program '("gnutls-cli -p %p --dh-bits=2048 --ocsp --x509cafile=%t --priority='SECURE192:+SECURE128:-VERS-ALL:+VERS-TLS1.3:%%PROFILE_MEDIUM' %h" "openssl s_client -connect %h:%p -CAfile %t -no_ssl2 -no_ssl3 -ign_eof")
@@ -67,7 +71,7 @@
 (setq-default indent-tabs-mode nil
               tab-width 2)
 
-(setq-default line-spacing 0.1)
+(setq-default line-spacing 0)
 (setq-default line-move-visual nil)
 ;; Focus new help windows when opened
 (setq-default help-window-select t)
@@ -134,7 +138,20 @@
 (defun risky-local-variable-p (&rest args) "Local variables. no ARGS." nil)
 
 ;; Fonts used:
-(add-to-list 'default-frame-alist '(font . "Pragmata Pro Mono-18"))
+(add-to-list 'default-frame-alist '(font . "Pragmata Pro-18"))
+
+(mapc (lambda (it)
+        (set-fontset-font t
+                          (cons (decode-char 'ucs (car it))
+                                (decode-char 'ucs (cdr it)))
+                          "Symbola"))
+      '((#x1f000 . #x1f02f)    ; Mahjong Tiles
+        (#x1f0a0 . #x1f0ff)    ; Playing Cards
+        (#x1f110 . #x1f19a)    ; Enclosed Alphanumeric Supplement
+                               ; Regional Indicator Symbol, Enclosed Ideographic Supplement,
+                               ; Emoticons, Transport and Map Symbols, Alchemical Symbols
+        (#x1f1e6 . #x1f8ff)))
+
 (setq font-lock-maximum-decoration t)
 ;; Prevent emacs from creating a backup file filename~
 (setq make-backup-files nil)
@@ -228,6 +245,10 @@
   :init
   (setq battery-mode-line-format "%b%p%%")
   (display-battery-mode))
+
+(use-package fortune
+  :ensure nil
+  :init (setq fortune-file (expand-file-name "~/.emacs.d/lambda.txt")))
 
 (use-package hideshow
   :ensure nil
@@ -1202,7 +1223,7 @@ The app is chosen from your OS's preference."
         org-agenda-compact-blocks t
         org-crypt-disable-auto-save 'encrypt
         org-crypt-key "C71CD9843FE0986C61CC26722CBACD9B90C9D091"
-        org-tags-exclude-from-inheritance (quote ("crypt"))
+        org-tags-exclude-from-inheritance '("crypt")
         org-babel-clojure-backend 'cider
         org-confirm-babel-evaluate nil
         org-default-notes-file (concat org-directory "/todo.org")
@@ -1423,6 +1444,7 @@ The app is chosen from your OS's preference."
 
 (use-package slime
   :after (projectile evil evil-collection)
+  :ensure slime-company
   :mode ((".sbclrc\\'" . common-lisp-mode))
   :bind (:map slime-mode-map
               ([C-return] . slime-edit-definition)
@@ -1486,6 +1508,7 @@ The app is chosen from your OS's preference."
   (evil-collection-define-key '(visual normal) 'slime-repl-mode-map "K" 'slime-describe-symbol))
 
 (use-package slime-company
+  :after (company slime)
   :init
   (setq slime-company-completion 'fuzzy
         slime-company-major-modes '(lisp-mode slime-repl-mode)))

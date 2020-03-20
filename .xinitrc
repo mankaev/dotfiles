@@ -33,6 +33,7 @@ export XKB_DEFAULT_OPTIONS=grp:shifts_toggle
 
 export XDG_RUNTIME_DIR=/run/user/1000
 
+# till i'll figure out why it does not connect to wi-fi
 sudo systemctl restart systemd-networkd
 
 xset -b
@@ -40,8 +41,9 @@ xset r rate 300 45
 xhost si:localuser:root
 setxkbmap -layout "us,ru" -option "" && setxkbmap -option grp:shifts_toggle
 
-compton -D 0 --backend glx &
-termite &
+picom -D 0 --backend glx &
+calibre &
+st &
 $HOME/bin/firefox &
 emacs &
 i3
