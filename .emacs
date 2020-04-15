@@ -317,6 +317,15 @@
         shr-use-fonts nil)
   (set-face-font 'variable-pitch "PT Serif-20"))
 
+(use-package shr-tag-pre-highlight
+  :after shr
+  :init
+  (require 'shr-tag-pre-highlight)
+  (add-to-list 'shr-external-rendering-functions '(pre . shr-tag-pre-highlight))
+  (with-eval-after-load 'eww
+    (advice-add 'eww-display-html :around
+                'eww-display-html--override-shr-external-rendering-functions)))
+
 (use-package calendar
   :ensure nil
   :hook (calendar-today-visible . calendar-mark-today)
@@ -1402,6 +1411,7 @@ The app is chosen from your OS's preference."
   :ensure cider
   :hook (cider-repl-mode . (lambda ()
                              (company-mode)
+                             (hs-minor-mode)
                              (cider-company-enable-fuzzy-completion)
                              (define-key cider-repl-mode-map (kbd "M-s") nil)
                              (setq-local company-backends '((company-capf)))))
@@ -1452,6 +1462,7 @@ The app is chosen from your OS's preference."
         ;; (:map slime-repl-mode-map
         ;;       ("M-s h"    . counsel-slime-repl-history))
   :hook (slime-repl-mode . (lambda ()
+                             (hs-minor-mode)
                              (define-key slime-repl-mode-map (kbd "M-s") nil)
                              (setq-local company-backends '((company-slime company-yasnippet)))
                              (setq-local browse-url-browser-function 'eww-browse-url)))
