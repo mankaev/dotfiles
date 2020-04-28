@@ -55,14 +55,14 @@
       socks-password "")
 
 (setq tls-checktrust t
-      tls-program '("gnutls-cli -p %p --dh-bits=2048 --ocsp --x509cafile=%t --priority='SECURE192:+SECURE128:-VERS-ALL:+VERS-TLS1.3:%%PROFILE_MEDIUM' %h" "openssl s_client -connect %h:%p -CAfile %t -no_ssl2 -no_ssl3 -ign_eof")
+      tls-program '("gnutls-cli -p %p --dh-bits=3072 --ocsp --x509cafile=%t --strict-tofu --priority='SECURE192:+SECURE128:-VERS-ALL:+VERS-TLS1.2:+VERS-TLS1.3' %h" "gnutls-cli -p %p %h")
       gnutls-verify-error t
       gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"
-      gnutls-min-prime-bits 2048
+      gnutls-min-prime-bits 3072
       network-security-level 'medium
       nsm-save-host-names t)
 
-(setq auth-sources '("~/.authinfo.gpg" "~/.netrc"))
+(setq auth-sources '("~/.authinfo.gpg"))
 
 ;; This makes long-line buffers usable
 (setq-default bidi-display-reordering nil)
@@ -86,7 +86,14 @@
 ;; Underline below the font bottomline instead of the baseline
 (setq x-underline-at-descent-line t)
 (setq x-gtk-use-system-tooltips nil)        ; Use Emacs tooltips
-(setq cursor-in-non-selected-windows nil)   ; Keep cursors and highlights in current window only
+(setq-default cursor-in-non-selected-windows nil)   ; Keep cursors and highlights in current window only
+(setq highlight-nonselected-windows nil)
+
+;; Don't ping things that look like domain names.
+(setq ffap-machine-p-known 'reject)
+
+;; slightly less to process at startup.
+(setq command-line-x-option-alist nil)
 
 ;; Make Tab complete if the line is indented
 (setq tab-always-indent 'complete)
@@ -1110,7 +1117,8 @@ The app is chosen from your OS's preference."
 (use-package flyspell-correct-ivy
   :after (flyspell ivy)
   :bind (:map flyspell-mode-map
-              ("C-;" . flyspell-correct-word-generic)))
+              ("C-;" . flyspell-correct-wrapper))
+  :init (setq flyspell-correct-interface #'flyspell-correct-ivy))
 
 (use-package projectile                 ; Project management
   :config
@@ -1382,7 +1390,7 @@ The app is chosen from your OS's preference."
                           (setq-local company-backends '((company-capf)))))
   :bind (:map clojure-mode-map
               ("M-s j" . cider-jack-in)
-              ("M-s J" . cider-jack-in-clojurescript))
+              ("M-s J" . cider-jack-in-cljs))
   :init
   (require 'clojure-mode)
   (define-clojure-indent
@@ -1437,6 +1445,9 @@ The app is chosen from your OS's preference."
         cljr-warn-on-eval nil)
   :diminish clj-refactor-mode)
 
+(use-package clojure-snippets           ; Yasnippets for Clojure
+  :after (yasnippet clojure-mode))
+
 (use-package geiser                    ; Geiser mode
   :init
   (setq geiser-default-implementation 'chez
@@ -1444,9 +1455,6 @@ The app is chosen from your OS's preference."
         geiser-repl-use-other-window nil
         geiser-repl-history-filename "~/.emacs.d/geiser-history")
   :diminish (geiser-mode geiser-autodoc-mode))
-
-(use-package clojure-snippets           ; Yasnippets for Clojure
-  :after (yasnippet clojure-mode))
 
 (use-package elsa)
 (use-package cask)
@@ -1545,8 +1553,7 @@ The app is chosen from your OS's preference."
           "https://functionaljobs.com/jobs/search/?q=lisp&format=rss"
           "https://www.archlinux.org/feeds/news/"
           "http://planet.lisp.org/rss20.xml"
-          "http://planet.emacslife.com/atom.xml")
-        elfeed-use-curl nil))
+          "http://planet.emacslife.com/atom.xml")))
 
 ;; Dired hacks
 (use-package dired-hacks-utils)
@@ -1844,6 +1851,12 @@ The app is chosen from your OS's preference."
   :hook (after-init . (lambda ()
                         (require 'reverse-im)
                         (reverse-im-activate "russian-computer"))))
+
+(use-package package-lint)
+
+(use-package bluetooth
+  :after evil
+  :init (evil-set-initial-state 'bluetooth-mode 'motion))
 
 (provide '.emacs)
 ;;; .emacs ends here
