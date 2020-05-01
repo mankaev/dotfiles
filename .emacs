@@ -142,8 +142,6 @@
 (setq confirm-nonexistent-file-or-buffer nil) ; Do not ask confirmation for new file/buffer
 (setq sentence-end-double-space nil)
 
-(defun risky-local-variable-p (&rest args) "Local variables. no ARGS." nil)
-
 ;; Fonts used:
 (add-to-list 'default-frame-alist '(font . "Pragmata Pro-18"))
 
@@ -325,13 +323,27 @@
   (set-face-font 'variable-pitch "PT Serif-20"))
 
 (use-package shr-tag-pre-highlight
-  :after shr
+  :after (eww shr)
   :init
   (require 'shr-tag-pre-highlight)
   (add-to-list 'shr-external-rendering-functions '(pre . shr-tag-pre-highlight))
-  (with-eval-after-load 'eww
-    (advice-add 'eww-display-html :around
-                'eww-display-html--override-shr-external-rendering-functions)))
+  (advice-add 'eww-display-html :around
+              'eww-display-html--override-shr-external-rendering-functions))
+
+(use-package shrface
+  :after shr
+  :hook (mu4e-view-mode . shrface-mode)
+  :hook (eww-after-render . shrface-mode)
+  :init
+  (require 'shrface)
+  (setq shrface-href-versatile t)
+  (evil-define-key '(visual normal) eww-mode-map
+    (kbd "<tab>") 'org-cycle
+    (kbd "<S-tab>") 'org-shifttab
+    (kbd "C-j") 'outline-next-visible-heading
+    (kbd "C-k") 'outline-previous-visible-heading)
+  ;; (shrface-trial)
+  (shrface-basic))
 
 (use-package calendar
   :ensure nil
@@ -369,7 +381,7 @@
   :ensure nil
   :hook (sh-mode . (lambda ()
                      (flycheck-mode)
-                     (setq-local company-backends '((company-shell)))))
+                     (setq-local company-backends '(company-shell))))
   :mode ("\\.zsh\\'" . sh-mode)
   :bind (:map sh-mode-map
               ("M-s j"   . eshell-toggle))
@@ -498,9 +510,8 @@
   :bind (("M-s t"   . eshell-toggle))
   :hook (eshell-mode . (lambda ()
                          (company-mode)
-                         (setq-local company-backends '((company-capf
-                                                         company-files)))
-                         (setq-local company-idle-delay 0.7)
+                         (setq-local company-backends '(company-capf company-files company-sh))
+
                          ;; Hack to define key in eshell-mode
                          (define-key eshell-mode-map (kbd "M-s") nil)
                          (define-key eshell-mode-map (kbd "M-s t") 'eshell-toggle)
@@ -580,12 +591,12 @@
   :ensure nil
   :hook ((c++-mode . (lambda ()
                        (add-hook 'before-save-hook 'clang-format-buffer nil 'local)
-                       (setq-local company-backends '((company-clang company-c-headers)))
+                       (setq-local company-backends '(company-clang company-c-headers))
                        (setq-local flycheck-gcc-language-standard "c++17")
                        (setq-local flycheck-clang-language-standard "c++17")))
          (c-mode . (lambda ()
                      (add-hook 'before-save-hook 'clang-format-buffer nil 'local)
-                     (setq-local company-backends '((company-clang company-c-headers)))
+                     (setq-local company-backends '(company-clang company-c-headers))
                      (setq-local flycheck-gcc-language-standard "c11")
                      (setq-local flycheck-clang-language-standard "c11"))))
   :bind (:map c-mode-map
@@ -617,7 +628,7 @@
 (use-package erc
   :ensure nil
   :hook  ((erc-mode . (lambda ()
-                        (setq-local company-backends '((company-capf)))
+                        (setq-local company-backends '(company-capf))
                         (company-mode)))
           (erc-text-matched . erc-global-notify))
   :config
@@ -682,7 +693,7 @@
 (use-package nxml-mode                  ; XML editing
   :ensure nil
   :hook (nxml-mode . (lambda ()
-                       (setq-local company-backends '((company-nxml)))))
+                       (setq-local company-backends '(company-nxml))))
   :config
   ;; Complete closing tags, and insert XML declarations into empty files
   (setq nxml-slash-auto-complete-flag t
@@ -699,7 +710,7 @@
 (use-package ielm-mode
   :ensure nil
   :hook (ielm-mode . (lambda ()
-                       (setq-local company-backends '((company-capf)))
+                       (setq-local company-backends '(company-capf))
                        (company-mode))))
 
 (use-package elisp-mode                 ; Emacs Lisp editing
@@ -711,7 +722,7 @@
   :hook ((emacs-lisp-mode . (lambda ()
                               (elsa-setup-font-lock)
                               (flycheck-elsa-setup)
-                              (setq-local company-backends '((company-capf)))))
+                              (setq-local company-backends '(company-capf))))
          (ielm-mode . (lambda ()
                         (setq-local comint-input-ring-file-name "~/.emacs.d/.ielm-input.hist"))))
   :interpreter ("emacs" . emacs-lisp-mode))
@@ -813,10 +824,10 @@ The app is chosen from your OS's preference."
 (use-package racket-mode                ; Racket language mode
   :mode "\\.rkt\\'"
   :hook ((racket-repl-mode . (lambda ()
-                               (setq-local company-backends '((company-capf)))
+                               (setq-local company-backends '(company-capf))
                                (company-mode)))
          (racket-mode . (lambda ()
-                          (setq-local company-backends '((company-capf))))))
+                          (setq-local company-backends '(company-capf)))))
   :bind (:map racket-mode-map
               ("M-s j" . racket-run)))
 
@@ -905,8 +916,6 @@ The app is chosen from your OS's preference."
            cider-repl-mode
            sly-mode
            sly-mrepl-mode
-           slime-mode
-           slime-repl-mode
            eshell-mode
            racket-mode
            racket-repl-mode
@@ -955,8 +964,8 @@ The app is chosen from your OS's preference."
   (sp-local-pair 'lisp-interaction-mode "`" nil :actions nil)
   (sp-local-pair 'lisp-mode "'" nil :actions nil)
   (sp-local-pair 'lisp-mode "`" nil :actions nil)
-  (sp-local-pair 'slime-repl-mode "'" nil :actions nil)
-  (sp-local-pair 'slime-repl-mode "`" nil :actions nil)
+  (sp-local-pair 'sly-repl-mode "'" nil :actions nil)
+  (sp-local-pair 'sly-repl-mode "`" nil :actions nil)
   (sp-local-pair 'clojure-mode "'" nil :actions nil)
   (sp-local-pair 'clojure-mode "`" nil :actions nil)
   (sp-local-pair 'cider-repl-mode "'" nil :actions nil)
@@ -1057,7 +1066,7 @@ The app is chosen from your OS's preference."
 
 (use-package markdown-mode              ; Edit markdown files
   :hook (markdown-mode . auto-fill-mode)
-  :mode "\\.md\\'"
+  :mode "\\.markdown\\.md\\'"
   :config (setq markdown-fontify-code-blocks-natively t))
 
 (use-package autorevert
@@ -1205,7 +1214,7 @@ The app is chosen from your OS's preference."
 (use-package org                        ; Org Plus Contributions
   :ensure org-plus-contrib
   :hook ((org-mode . (lambda ()
-                       (setq-local company-backends '((company-ispell company-files company-dabbrev)))))
+                       (setq-local company-backends '(company-ispell company-files company-dabbrev))))
          (org-babel-after-execute . org-display-inline-images))
   :config
   (setq org-modules '(org-eshell org-protocol org-habit org-irc org-eww org-bookmark org-elisp-symbol org-man org-notify))
@@ -1326,7 +1335,7 @@ The app is chosen from your OS's preference."
               ([C-return] . jedi:goto-definition))
   :hook ((inferior-python-mode . company-mode)
          (python-mode . (lambda ()
-                          (setq-local company-backends '((company-jedi)))
+                          (setq-local company-backends '(company-jedi))
                           (setq fill-column 79)))
          (ein:connect-mode . ein:jedi-setup))
   :config
@@ -1387,7 +1396,7 @@ The app is chosen from your OS's preference."
 
 (use-package clojure-mode               ; Major mode for Clojure files
   :hook (clojure-mode . (lambda ()
-                          (setq-local company-backends '((company-capf)))))
+                          (setq-local company-backends '(company-capf))))
   :bind (:map clojure-mode-map
               ("M-s j" . cider-jack-in)
               ("M-s J" . cider-jack-in-cljs))
@@ -1422,7 +1431,7 @@ The app is chosen from your OS's preference."
                              (hs-minor-mode)
                              (cider-company-enable-fuzzy-completion)
                              (define-key cider-repl-mode-map (kbd "M-s") nil)
-                             (setq-local company-backends '((company-capf)))))
+                             (setq-local company-backends '(company-capf))))
   :bind (:map cider-repl-mode-map
               ("C-l" . cider-repl-clear-buffer))
   :config
@@ -1460,80 +1469,29 @@ The app is chosen from your OS's preference."
 (use-package cask)
 (use-package flycheck-elsa)
 
-(use-package slime
-  :after (projectile evil evil-collection)
-  :ensure slime-company
-  :mode ((".sbclrc\\'" . common-lisp-mode))
-  :bind (:map slime-mode-map
-              ([C-return] . slime-edit-definition)
-              ("C-l"      . slime-repl-clear-buffer))
-        ;; (:map slime-repl-mode-map
-        ;;       ("M-s h"    . counsel-slime-repl-history))
-  :hook (slime-repl-mode . (lambda ()
-                             (hs-minor-mode)
-                             (define-key slime-repl-mode-map (kbd "M-s") nil)
-                             (setq-local company-backends '((company-slime company-yasnippet)))
-                             (setq-local browse-url-browser-function 'eww-browse-url)))
-  :hook (slime-mode . (lambda ()
-                        (setq-local browse-url-browser-function 'eww-browse-url)
-                        (setq-local company-backends '((company-slime company-yasnippet)))
-                        (setq-local lisp-indent-function 'common-lisp-indent-function)
-                        (setq-local lisp-lambda-list-keyword-parameter-alignment t)
-                        (setq-local lisp-loop-indent-forms-like-keywords t)
-                        (setq-local lisp-loop-indent-subclauses nil)
-                        (eldoc-mode -1)
-                        (turn-on-redshank-mode)))
+(use-package sly
+  :after (evil evil-collection)
+  :mode (".sbclrc\\'" . lisp-mode)
+  :bind (:map lisp-mode-map
+              ([C-return] . sly-edit-definition)
+              ("M-s j"    . sly))
+  :hook (sly-mrepl-mode . (lambda ()
+                            (company-mode)
+                            (setq-local browse-url-browser-function 'eww-browse-url)
+                            (setq-local company-backends '(company-capf company-yasnippet))))
+  :hook (sly-mode . (lambda ()
+                      (company-mode)
+                      (setq-local browse-url-browser-function 'eww-browse-url)
+                      (setq-local company-backends '(company-capf))))
   :init
-  (setq slime-contribs '(slime-asdf
-                         slime-company
-                         slime-compiler-notes-tree
-                         slime-fancy
-                         slime-hyperdoc
-                         slime-indentation
-                         slime-macrostep
-                         slime-mdot-fu
-                         slime-presentations
-                         slime-quicklisp
-                         slime-references
-                         slime-sbcl-exts
-                         slime-repl
-                         slime-sprof
-                         slime-tramp
-                         slime-xref-browser
-                         inferior-slime))
-
-  (defadvice slime-repl-emit (around slime-repl-ansi-colorize activate compile)
-    (with-current-buffer (slime-output-buffer)
-      (let ((start slime-output-start))
-        (setq ad-return-value ad-do-it)
-        (ansi-color-apply-on-region start slime-output-end))))
-
-  (setq common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/"
-        slime-auto-select-connection 'always
-        slime-completion-at-point-functions 'slime-fuzzy-complete-symbol
-        slime-default-lisp 'sbcl
-        slime-description-autofocus t 
-        slime-fuzzy-explanation ""
-        slime-highlight-compiler-notes t
-        slime-inhibit-pipelining nil
-        slime-kill-without-query-p t
-        slime-lisp-implementations '((sbcl  ("sbcl" "--noinform" "--merge-core-pages")))
-        slime-load-failed-fasl 'always
-        slime-net-coding-system 'utf-8-unix
-        slime-repl-history-remove-duplicates t
-        slime-repl-history-trim-whitespaces t
-        slime-startup-animation nil
-        slime-when-complete-filename-expand t)
-  (evil-collection-define-key '(visual normal) 'slime-repl-mode-map "K" 'slime-describe-symbol))
-
-(use-package slime-company
-  :after (company slime)
-  :init
-  (setq slime-company-completion 'fuzzy
-        slime-company-major-modes '(lisp-mode slime-repl-mode)))
-
-(use-package redshank
-  :after slime)
+  (setq sly-default-lisp 'sbcl
+        sly-net-coding-system 'utf-8-unix
+        inferior-lisp-program "sbcl"
+        sly-mrepl-pop-sylvester nil
+        sly-lisp-implementations '((sbcl  ("sbcl" "--noinform")))
+        sly-mrepl-output-filter-functions '(ansi-color-apply))
+  (setq common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/")
+  (evil-collection-define-key '(visual normal) 'sly-mode-map "K" 'sly-describe-symbol))
 
 (use-package dockerfile-mode)
 
@@ -1542,8 +1500,9 @@ The app is chosen from your OS's preference."
   :config
   (evil-set-initial-state 'sdcv-mode 'normal)
   (evil-collection-define-key 'normal 'sdcv-mode-map "q" 'kill-buffer-and-window)
-  (evil-collection-define-key '(visual normal) 'sdcv-mode-map (kbd "C-j") 'sdcv-next-dictionary)
-  (evil-collection-define-key '(visual normal) 'sdcv-mode-map (kbd "C-k") 'sdcv-previous-dictionary))
+  (evil-collection-define-key '(visual normal) 'sdcv-mode-map
+    (kbd "C-j") 'sdcv-next-dictionary
+    (kbd "C-k") 'sdcv-previous-dictionary))
 
 (use-package elfeed
   :init
@@ -1563,7 +1522,6 @@ The app is chosen from your OS's preference."
 (use-package dired-collapse
   :hook (dired-mode . dired-collapse-mode))
 (use-package dired-ranger)
-
 (use-package dired-imenu)
 
 (use-package hy-mode)                   ; Hy language mode
@@ -1600,7 +1558,7 @@ The app is chosen from your OS's preference."
                       (when (string-equal "jsx" (file-name-extension buffer-file-name))
                         (tide-setup))
                       (require 'company-web-html)
-                      (setq-local company-backends '((company-web-html company-css)))))
+                      (setq-local company-backends '(company-web-html company-css))))
   :config
   (setq web-mode-enable-auto-pairing t
         web-mode-enable-auto-closing t
@@ -1614,7 +1572,7 @@ The app is chosen from your OS's preference."
 
 (use-package js2-mode                   ; Powerful JavaScript mode
   :hook (js2-mode . (lambda ()
-                      (setq-local company-backends '((company-tern)))
+                      (setq-local company-backends '(company-tern))
                       ;; Better Imenu in j2-mode
                       (js2-imenu-extras-mode)))
   :config
@@ -1635,7 +1593,7 @@ The app is chosen from your OS's preference."
   :hook (php-mode . (lambda ()
                       (require 'ac-php)
                       (require 'company-php)
-                      (setq-local company-backends '((company-ac-php-backend)))))
+                      (setq-local company-backends '(company-ac-php-backend))))
   :bind (:map php-mode-map
               ("C-t" . ac-php-location-stack-back)
               ([C-return] . ac-php-find-symbol-at-point))
@@ -1655,7 +1613,7 @@ The app is chosen from your OS's preference."
 (use-package go-mode
   :hook (go-mode . (lambda ()
                      (add-hook 'before-save-hook 'gofmt-before-save nil 'local)
-                     (setq-local company-backends '((company-go)))))
+                     (setq-local company-backends '(company-go))))
   :bind (:map go-mode-map
               ("C-c C-r" . go-remove-unused-imports)
               ([C-return] . godef-jump)))
@@ -1667,11 +1625,14 @@ The app is chosen from your OS's preference."
 (use-package cmake-mode
   :mode "CMakeLists\\.txt\\.cmake\\'"
   :hook (cmake-mode . (lambda ()
-                        (setq-local company-backends '((company-cmake))))))
+                        (setq-local company-backends '(company-cmake)))))
 
 (use-package modern-cpp-font-lock
   :hook (c++-mode . modern-c++-font-lock-mode)
   :diminish modern-c++-font-lock-mode)
+
+(use-package typescript-mode
+  :mode "\\.tsx\\'")
 
 (use-package tide
   :hook (typescript-mode . (lambda ()
@@ -1691,7 +1652,7 @@ The app is chosen from your OS's preference."
 
 (use-package yaml-mode)                 ; Edit YAML files
 
-(use-package pkgbuild-mode)             ; PKGBUILD files for Archlinux
+(use-package pkgbuild-mode)             ; PKGBUILD files for ArchLinux
 
 (use-package restclient                 ; Interactive HTTP client
   :hook (restclient-mode . (lambda ()
@@ -1775,22 +1736,6 @@ The app is chosen from your OS's preference."
   :bind (:map projectile-mode-map
               ("M-s f"   . find-file-in-project-by-selected))
   :config (setq ffip-use-rust-fd t))
-
-(use-package neotree
-  :bind (("C-<tab>"   . neotree-toggle)
-         :map neotree-mode-map
-              ("C-<tab>"   . neotree-toggle))
-  :init
-  (setq projectile-switch-project-action 'neotree-projectile-action)
-  (setq neo-theme 'nerd
-        neo-smart-open t
-        neo-window-position 'right
-        neo-mode-line-type 'default
-        neo-show-hidden-files t
-        neo-autorefresh nil
-        neo-window-width 40
-        neo-vc-integration '(face)
-        neo-show-slash-for-folder nil))
 
 (use-package swiper
   :bind (("M-s s"   . swiper)))
