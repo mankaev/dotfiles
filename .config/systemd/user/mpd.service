@@ -4,6 +4,7 @@ Description=Music Player Daemon
 [Service]
 Type=forking
 ExecStart=/usr/bin/mpd
+ExecStartPost=/bin/sh -c "sudo renice -20 $MAINPID && sudo ionice -c 1 -n 0 -p $MAINPID && sudo chrt -r -p 99 $MAINPID"
 
 [Install]
 WantedBy=default.target
