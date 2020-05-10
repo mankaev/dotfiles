@@ -34,6 +34,7 @@
 
 (setq frame-inhibit-implied-resize t)
 (advice-add #'x-apply-session-resources :override #'ignore)
+(advice-add 'display-startup-echo-area-message :override #'ignore)
 
 (setq package-archives '(("gnu"          . "https://elpa.gnu.org/packages/")
                          ("melpa"        . "https://melpa.org/packages/")
@@ -116,14 +117,6 @@
       scroll-preserve-screen-position 'always ;; Start recentre from top
       recenter-positions '(top middle bottom) ;; Disable mouse scrolling acceleration
       mouse-wheel-progressive-speed nil)
-
-(mouse-avoidance-mode 'banish)
-(setq mouse-wheel-mode                nil
-      mouse-avoidance-banish-position '((frame-or-window   . frame)
-                                        (side              . right)
-                                        (side-pos          . 0)
-                                        (top-or-bottom     . bottom)
-                                        (top-or-bottom-pos . 0)))
 
 (setq display-hourglass nil)
 
@@ -285,14 +278,6 @@
   (setq desktop-save t
         desktop-load-locked-desktop t)
   (desktop-save-mode))
-
-(use-package show-paren-mode
-  :ensure nil
-  :hook (prog-mode)
-  :init
-  (setq show-paren-delay 0
-        show-paren-when-point-inside-paren t
-        show-paren-when-point-in-periphery t))
 
 (use-package arc-mode
  :ensure nil
@@ -603,7 +588,9 @@
               ("C-c C-c" . projectile-compile-project)
               ([C-M-tab] . clang-format-region)
               ([C-return] . counsel-gtags-dwim))
-  :init (setq c-basic-offset 2))
+  :init
+  (require 'smartparens-c)
+  (setq c-basic-offset 2))
 
 (use-package minibuffer
   :ensure nil
@@ -818,7 +805,10 @@ The app is chosen from your OS's preference."
   :init
   (setq custom-safe-themes t)           ; Treat themes as safe
   (setq spacemacs-theme-comment-italic t
-        spacemacs-theme-comment-bg nil)
+        spacemacs-theme-comment-bg nil
+        spacemacs-theme-org-height nil
+        spacemacs-theme-org-bold nil
+        spacemacs-theme-underline-parens nil)
   (load-theme 'spacemacs-light 'no-confirm))
 
 (use-package racket-mode                ; Racket language mode
@@ -861,20 +851,11 @@ The app is chosen from your OS's preference."
 (use-package evil-ediff
   :after evil)
 
-(use-package evil-nerd-commenter
-  :after evil
-  :bind ("M-;" . evilnc-comment-or-uncomment-lines))
-
 (use-package evil-collection
   :after evil
   :init
   (setq evil-collection-company-use-tng t)
   (evil-collection-init))
-
-(use-package evil-multiedit
-  :after evil
-  :init (require 'evil-multiedit)
-  :config (evil-multiedit-default-keybinds))
 
 (use-package doom-modeline
   :hook (after-init . doom-modeline-mode)
@@ -911,25 +892,20 @@ The app is chosen from your OS's preference."
   :diminish parinfer-mode)
 
 (use-package smartparens                ; Parenthesis editing and balancing
-  :hook (((emacs-lisp-mode
-           clojure-mode
-           cider-repl-mode
-           sly-mode
-           sly-mrepl-mode
-           eshell-mode
-           racket-mode
-           racket-repl-mode
-           ielm-mode) . smartparens-strict-mode)
-         (prog-mode . smartparens-mode))
+  :hook ((sp--lisp-modes . smartparens-strict-mode)
+         ((prog-mode
+           markdown-mode
+           org-mode
+           sly-mrepl-mode) . smartparens-mode))
   :init
   (setq sp-autoskip-closing-pair 'always
-        ;; Don't kill entire symbol on C-k
-        sp-hybrid-kill-entire-symbol nil
-        ;; Disable debug messages
-        sp-message-width nil
+        sp-hybrid-kill-entire-symbol nil ;; Don't kill entire symbol on C-k
+        sp-message-width nil ;; Disable debug messages
         sp-show-pair-from-inside t
         ;; Keep pair content overlay on backward movement
-        sp-cancel-autoskip-on-backward-movement nil)
+        sp-cancel-autoskip-on-backward-movement nil
+        sp-show-pair-delay 0)
+  (show-smartparens-global-mode t)
   :diminish smartparens-mode)
 
 (use-package smartparens-config         ; Configure Smartparens
@@ -956,28 +932,9 @@ The app is chosen from your OS's preference."
          :map smartparens-strict-mode-map
               ("M-q"          . sp-indent-defun))
   :init
-  (sp-local-pair 'minibuffer-inactive-mode "'" nil :actions nil)
-  (sp-local-pair 'minibuffer-inactive-mode "`" nil :actions nil)
-  (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil)
-  (sp-local-pair 'emacs-lisp-mode "`" nil :actions nil)
-  (sp-local-pair 'lisp-interaction-mode "'" nil :actions nil)
-  (sp-local-pair 'lisp-interaction-mode "`" nil :actions nil)
-  (sp-local-pair 'lisp-mode "'" nil :actions nil)
-  (sp-local-pair 'lisp-mode "`" nil :actions nil)
-  (sp-local-pair 'sly-repl-mode "'" nil :actions nil)
-  (sp-local-pair 'sly-repl-mode "`" nil :actions nil)
-  (sp-local-pair 'clojure-mode "'" nil :actions nil)
-  (sp-local-pair 'clojure-mode "`" nil :actions nil)
-  (sp-local-pair 'cider-repl-mode "'" nil :actions nil)
-  (sp-local-pair 'cider-repl-mode "`" nil :actions nil)
-  (sp-local-pair 'inferior-emacs-lisp-mode "'" nil :actions nil)
-  (sp-local-pair 'inferior-emacs-lisp-mode "`" nil :actions nil)
-
-  (sp-local-pair 'org-mode "*" "*" :actions '(insert wrap) :unless '(sp-point-after-word-p sp-point-at-bol-p) :wrap "C-*" :skip-match 'sp--org-skip-asterisk)
-  (sp-local-pair 'org-mode "_" "_" :unless '(sp-point-after-word-p) :wrap "C-_")
-  (sp-local-pair 'org-mode "/" "/" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC")))
-  (sp-local-pair 'org-mode "~" "~" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC")))
-  (sp-local-pair 'org-mode "=" "=" :unless '(sp-point-after-word-p) :post-handlers '(("[d1]" "SPC")))
+  (dolist (mode `(,@sp--lisp-modes minibuffer-inactive-mode sly-mrepl-mode))
+     (sp-local-pair mode "'" nil :actions nil)
+     (sp-local-pair mode "`" nil :actions nil))
   (setq sp-ignore-modes-list (delete 'minibuffer-inactive-mode sp-ignore-modes-list)))
 
 (use-package diff-hl                    ; Show changes in fringe
@@ -1067,7 +1024,10 @@ The app is chosen from your OS's preference."
 (use-package markdown-mode              ; Edit markdown files
   :hook (markdown-mode . auto-fill-mode)
   :mode "\\.markdown\\.md\\'"
-  :config (setq markdown-fontify-code-blocks-natively t))
+  :config
+  (require 'smartparens-markdown)
+  (setq markdown-fontify-code-blocks-natively t
+        markdown-header-scaling nil))
 
 (use-package autorevert
   :config
@@ -1083,6 +1043,7 @@ The app is chosen from your OS's preference."
   :hook ((prog-mode text-mode) . company-mode)
   :config
   (setq company-idle-delay 0.3
+        company-ispell-dictionary ispell-dictionary
         company-minimum-prefix-length 2
         company-tooltip-align-annotations t
         company-tooltip-flip-when-above t ;; Easy navigation to candidates with M-<n>
@@ -1108,11 +1069,12 @@ The app is chosen from your OS's preference."
   :if (executable-find "hunspell")
   :hook ((text-mode . flyspell-mode)
          (prog-mode . flyspell-prog-mode))
-  :config
+  :init
   (setq ispell-really-hunspell t
         ispell-program-name (executable-find "hunspell")
         ispell-check-comments  t
         ispell-dictionary "gbru"
+        ispell-alternate-dictionary "/usr/share/hunspell/en_GB-large.dic"
         ispell-local-dictionary-alist
         '(("gbru" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_GB,ru_RU") nil utf-8))
         ispell-hunspell-dictionary-alist ispell-local-dictionary-alist)
@@ -1217,7 +1179,8 @@ The app is chosen from your OS's preference."
                        (setq-local company-backends '(company-ispell company-files company-dabbrev))))
          (org-babel-after-execute . org-display-inline-images))
   :config
-  (setq org-modules '(org-eshell org-protocol org-habit org-irc org-eww org-bookmark org-elisp-symbol org-man org-notify))
+  (require 'smartparens-org)
+  (setq org-modules '(org-eshell org-protocol org-habit org-irc ol-eww ol-bookmark ol-elisp-symbol ol-man org-notify))
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((calc . t)
@@ -1232,15 +1195,10 @@ The app is chosen from your OS's preference."
      (plantuml . t)
      (python . t)
      (shell . t)))
-  (dolist (face '(org-level-1
-                  org-level-2
-                  org-level-3
-                  org-level-4
-                  org-level-5))
-    (set-face-attribute face nil :weight 'semi-bold :height 1.0))
   (require 'org-crypt)
   (org-crypt-use-before-save-magic)
-  (setq org-agenda-files '("~/files/org/todo.org" "~/files/org/work.org" "~/files/org/notes.org")
+  (setq org-adapt-indentation nil
+        org-agenda-files '("~/files/org/todo.org" "~/files/org/work.org" "~/files/org/notes.org")
         org-agenda-include-diary t
         org-agenda-span 10
         org-agenda-start-day "-3d"
@@ -1264,6 +1222,7 @@ The app is chosen from your OS's preference."
         org-plantuml-jar-path "/usr/share/java/plantuml/plantuml.jar"
         org-redisplay-inline-images t
         org-return-follows-link t       ; Follow links by pressing ENTER on them
+        org-edit-src-content-indentation 0
         org-src-fontify-natively t
         org-src-preserve-indentation t
         org-src-tab-acts-natively t
@@ -1402,16 +1361,7 @@ The app is chosen from your OS's preference."
               ("M-s J" . cider-jack-in-cljs))
   :init
   (require 'clojure-mode)
-  (define-clojure-indent
-    (defroutes 'defun)
-    (defrecord 2)
-    (GET 2)
-    (POST 2)
-    (PUT 2)
-    (DELETE 2)
-    (HEAD 2)
-    (ANY 2)
-    (context 2))
+  (require 'smartparens-clojure)
   :config
   (setq clojure-align-forms-automatically t))
 
@@ -1490,7 +1440,7 @@ The app is chosen from your OS's preference."
         sly-mrepl-pop-sylvester nil
         sly-lisp-implementations '((sbcl  ("sbcl" "--noinform")))
         sly-mrepl-output-filter-functions '(ansi-color-apply))
-  (setq common-lisp-hyperspec-root "file:///home/halapenio/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/")
+  (setq common-lisp-hyperspec-root (concat "file://" (expand-file-name "~") "/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/"))
   (evil-collection-define-key '(visual normal) 'sly-mode-map "K" 'sly-describe-symbol))
 
 (use-package dockerfile-mode)
@@ -1719,7 +1669,8 @@ The app is chosen from your OS's preference."
          :map counsel-mode-map
               ([escape] . minibuffer-keyboard-quit))
   :config
-  (setq counsel-git-cmd "rg --files"
+  (setq ivy-initial-inputs-alist nil
+        counsel-git-cmd "rg --files"
         counsel-rg-base-command "rg -i -M 120 --no-heading --line-number --color never %s ."
         counsel-grep-base-command "rg -i -M 120 --no-heading --line-number --color never '%s' %s")
 
