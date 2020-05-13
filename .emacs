@@ -794,9 +794,14 @@ The app is chosen from your OS's preference."
   :config
   (setq uniquify-buffer-name-style 'post-forward
         uniquify-separator "/"
-        uniquify-after-kill-buffer-p t  ; Rename after killing uniquified
-        ;; Ignore special buffers
-        uniquify-ignore-buffers-re "^\\*"))
+        uniquify-after-kill-buffer-p t      ; Rename after killing uniquified
+        uniquify-ignore-buffers-re "^\\*")) ; Ignore special buffers
+
+(use-package whitespace-mode
+  :ensure nil
+  :hook prog-mode
+  :hook (before-save . whitespace-cleanup)
+  :init (setq whitespace-style '(face trailing tab-mark)))
 
 ;;; Installed Packages
 
@@ -892,11 +897,6 @@ The app is chosen from your OS's preference."
   :diminish parinfer-mode)
 
 (use-package smartparens                ; Parenthesis editing and balancing
-  :hook ((sp--lisp-modes . smartparens-strict-mode)
-         ((prog-mode
-           markdown-mode
-           org-mode
-           sly-mrepl-mode) . smartparens-mode))
   :init
   (setq sp-autoskip-closing-pair 'always
         sp-hybrid-kill-entire-symbol nil ;; Don't kill entire symbol on C-k
@@ -911,9 +911,13 @@ The app is chosen from your OS's preference."
 (use-package smartparens-config         ; Configure Smartparens
   :ensure smartparens
   :after smartparens
+  :hook ((prog-mode
+          markdown-mode
+          org-mode
+          cider-repl-mode
+          sly-mrepl-mode) . smartparens-strict-mode)
   :hook ((smartparens-mode . (lambda ()
-                               (add-hook 'after-save-hook 'check-parens nil 'local)))
-         (minibuffer-setup . turn-on-smartparens-strict-mode))
+                               (add-hook 'after-save-hook 'check-parens nil 'local))))
   :bind (:map smartparens-mode-map
               ("M-r"          . sp-raise-sexp)
               ("M-<delete>"   . sp-unwrap-sexp)
@@ -932,9 +936,9 @@ The app is chosen from your OS's preference."
          :map smartparens-strict-mode-map
               ("M-q"          . sp-indent-defun))
   :init
-  (dolist (mode `(,@sp--lisp-modes minibuffer-inactive-mode sly-mrepl-mode))
-     (sp-local-pair mode "'" nil :actions nil)
-     (sp-local-pair mode "`" nil :actions nil))
+  (dolist (mode `(,@sp-lisp-modes minibuffer-inactive-mode sly-mrepl-mode))
+    (sp-local-pair mode "'" nil :actions nil)
+    (sp-local-pair mode "`" nil :actions nil))
   (setq sp-ignore-modes-list (delete 'minibuffer-inactive-mode sp-ignore-modes-list)))
 
 (use-package diff-hl                    ; Show changes in fringe
@@ -1026,7 +1030,15 @@ The app is chosen from your OS's preference."
   :mode "\\.markdown\\.md\\'"
   :config
   (require 'smartparens-markdown)
+  (dolist (face '(markdown-header-face-1
+                  markdown-header-face-2
+                  markdown-header-face-3
+                  markdown-header-face-4
+                  markdown-header-face-5
+                  markdown-header-face-6))
+    (set-face-attribute face nil :weight 'normal))
   (setq markdown-fontify-code-blocks-natively t
+        markdown-coding-system 'utf-8
         markdown-header-scaling nil))
 
 (use-package autorevert
@@ -1316,18 +1328,8 @@ The app is chosen from your OS's preference."
   :hook ((cider-stacktrace-mode . (lambda ()
                                     (cider-stacktrace-cycle-cause 2 1)))
          (cider-connected . (lambda ()
-                              (cider-repl-clear-banners)
-                              (cider-repl-start))))
+                              (cider-repl-clear-banners))))
   :config
-  (defun cider-repl-start ()
-    "Set an initial REPL configuration."
-    (interactive)
-    (nrepl-send-sync-request
-     (lax-plist-put
-      (nrepl--eval-request "(do (start) (alter-var-root #'clojure.main/repl-caught (partial constantly)) (alter-var-root #'clojure.repl/pst (partial constantly)))")
-      "inhibit-cider-middleware" "true")
-     (cider-current-repl)))
-
   (setq cider-stacktrace-default-filters '(clj java repl tooling dup)
         ;; Do not offer to open ClojureScript app in browser
         cider-offer-to-open-cljs-app-in-browser nil)
@@ -1361,7 +1363,6 @@ The app is chosen from your OS's preference."
               ("M-s J" . cider-jack-in-cljs))
   :init
   (require 'clojure-mode)
-  (require 'smartparens-clojure)
   :config
   (setq clojure-align-forms-automatically t))
 
