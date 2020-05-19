@@ -8,7 +8,6 @@ GDK_BACKEND=x11 TZ=UTC ionice -c 3 -n 7 nice -n 19 /usr/bin/chromium --disable \
     --disable-notifications \
     --disable-sync-preferences \
     --disable-reading-from-canvas \
-    --enable-native-gpu-memory-buffers \
     --enable-webrtc-hw-h264-encoding \
     --enable-precache \
     --enable-native-notifications \
@@ -19,7 +18,4 @@ GDK_BACKEND=x11 TZ=UTC ionice -c 3 -n 7 nice -n 19 /usr/bin/chromium --disable \
     --fast \
     --fast-start \
     --wm-window-animations-disabled \
-    --process-per-site \
-    # --single-process \
-    # --disable-remote-fonts \
-    # --kiosk
+    --force-device-scale-factor=1.1
