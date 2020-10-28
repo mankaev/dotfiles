@@ -228,7 +228,7 @@
 
 (use-package so-long
   :ensure nil
-  :init (global-so-long-mode))
+  :diminish so-long-mode)
 
 (use-package hideshow
   :ensure nil
@@ -280,6 +280,7 @@
   :init
   (setq eww-header-line-format nil
         browse-url-browser-function 'browse-url-xdg-open
+        image-use-external-converter t
         shr-width 65
         shr-inhibit-images t
         shr-use-colors nil
@@ -329,8 +330,7 @@
 (use-package sh-script                  ; Shell scripts
   :ensure nil
   :hook (sh-mode . (lambda ()
-                     (flycheck-mode)
-                     (setq-local company-backends '(company-shell))))
+                     (flycheck-mode)))
   :mode ("\\.zsh\\'" . sh-mode)
   :bind (:map sh-mode-map
               ("M-s j"   . eshell-toggle))
@@ -340,6 +340,7 @@
   :ensure nil
   :config
   (require 'gnus-icalendar)
+  (setq gnus-inhibit-images t)
   (setq gnus-icalendar-org-capture-file "~/files/org/todo.org")
   (gnus-icalendar-setup)
   (gnus-icalendar-org-setup))
@@ -384,6 +385,8 @@
         mu4e-user-mail-address-list '("mankaev@gmail.com")
         mu4e-view-image-max-width 800
         mu4e-view-show-addresses t
+        mu4e-view-show-images nil
+        mu4e-show-images nil
         mu4e-completing-read-function 'ivy-completing-read)
 
   (setq mu4e-contexts
@@ -607,6 +610,7 @@
         erc-query-display 'buffer
         erc-join-buffer 'bury
         erc-prompt-for-nickserv-password nil ; Do not ask for password
+        erc-prompt-for-password nil ; Do not ask for password
         erc-save-buffer-on-part nil
         erc-save-queries-on-quit nil
         erc-log-write-after-send t
@@ -1186,6 +1190,10 @@ The app is chosen from your OS's preference."
         org-plantuml-jar-path "/usr/share/java/plantuml/plantuml.jar"
         org-redisplay-inline-images t
         org-return-follows-link t       ; Follow links by pressing ENTER on them
+        org-fontify-quote-and-verse-blocks nil
+        org-fontify-whole-heading-line nil
+        org-hide-leading-stars nil
+        org-startup-indented nil
         org-src-fontify-natively t
         org-src-preserve-indentation t
         org-src-window-setup 'current-window
@@ -1421,6 +1429,11 @@ The app is chosen from your OS's preference."
       (let ((start slime-output-start))
         (setq ad-return-value ad-do-it)
         (ansi-color-apply-on-region start slime-output-end))))
+
+  (defadvice slime-show-description (after slime-description-fontify activate)
+    "Fontify sections of SLIME Description."
+    (with-current-buffer "*slime-description*"
+      (slime-company-doc-mode)))
 
   (setq common-lisp-hyperspec-root (concat "file://" (expand-file-name "~")
                                            "/.docset/Common_Lisp.docset/Contents/Resources/Documents/HyperSpec/HyperSpec/")

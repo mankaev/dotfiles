@@ -1,4 +1,4 @@
-export PATH=$HOME/.cask/bin:/usr/lib/ccache/bin:$HOME/.luarocks/bin:$HOME/.cargo/bin:$HOME/.local/bin:$HOME/bin:/usr/bin/core_perl:/usr/bin/site_perl:/usr/bin/vendor_perl:$HOME/.gem/ruby/2.3.0/bin:$HOME/.pear/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+export PATH=$HOME/bin:$HOME/.local/bin:$HOME/.cask/bin:$HOME/.luarocks/bin:$HOME/.gem/ruby/2.6.0/bin:$HOME/bin:$HOME/.cargo/bin:/usr/bin/core_perl:/usr/bin/site_perl:/usr/bin/vendor_perl:$HOME/.pear/bin:/opt/acl10.1express:/opt/flutter/bin/cache/dart-sdk/bin:/opt/flutter/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 export GTAGSFORCECPP=true
 
@@ -11,6 +11,7 @@ export MOZ_SERVICES_METRICS=0
 export MOZ_TELEMETRY_REPORTING=0
 export MOZ_USE_OMTP=1
 export MOZ_WEBRENDER=1
+export MOZ_X11_EGL=1
 
 export QEMU_AUDIO_DRV=alsa
 export QEMU_ALSA_DAC_BUFFER_SIZE=512
@@ -34,6 +35,9 @@ export XKB_DEFAULT_OPTIONS=grp:shifts_toggle
 export XDG_RUNTIME_DIR=/run/user/1000
 
 # till i'll figure out why it does not connect to wi-fi
+sudo rfkill unblock all
+sudo systemctl restart iwd
+sudo systemctl restart systemd-resolved
 sudo systemctl restart systemd-networkd
 
 xset -b
@@ -41,7 +45,7 @@ xset r rate 300 45
 xhost si:localuser:root
 setxkbmap -layout "us,ru" -option "" && setxkbmap -option grp:shifts_toggle
 
-picom -D 0 --backend glx &
+picom -D 0 -m 1 --backend glx --vsync &
 calibre &
 st &
 $HOME/bin/firefox &

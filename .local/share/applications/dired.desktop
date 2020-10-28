@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Emacs
+Exec=dired %u
+Type=Application
+Terminal=false
+Categories=System;
+MimeType=application/x-directory=dired.desktop;inode/directory=dired.desktop;
