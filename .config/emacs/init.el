@@ -123,7 +123,7 @@
 
 ;; Fonts used:
 (set-fontset-font t nil (font-spec :name "Pragmata Pro" :size 18))
-(set-fontset-font t 'symbol (font-spec :name "Symbola" :size 18))
+(set-fontset-font t 'symbol (font-spec :name "Noto Color Emoji" :size 18))
 
 (setq font-lock-maximum-decoration t)
 ;; Prevent emacs from creating a backup file filename~
@@ -356,7 +356,6 @@
   (mu4e-icalendar-setup)
   (setq mu4e-maildir "~/mail"
         mu4e-attachment-dir "~/tmp"
-        mu4e-auto-retrieve-keys t
         mu4e-compose-complete-only-personal t
         mu4e-compose-dont-reply-to-self t
         mu4e-compose-format-flowed t
