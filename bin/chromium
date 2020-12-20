@@ -15,6 +15,11 @@ GDK_BACKEND=x11 TZ=UTC ionice -c 3 -n 7 nice -n 19 /usr/bin/chromium --disable \
     --remote-debugging-port=9222 \
     --no-first-run \
     --hide-scrollbars \
+    --allow-insecure-localhost \
+    --enable-gpu-rasterization \
+    --enable-webassembly-simd\
+    --enable-hardware-overlays \
+    --enable-accelerated-video-decode \
     --fast \
     --fast-start \
     --wm-window-animations-disabled \

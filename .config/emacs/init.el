@@ -122,19 +122,8 @@
 (setq sentence-end-double-space nil)
 
 ;; Fonts used:
-;; (add-to-list 'default-frame-alist '(font . "Pragmata Pro-18"))
-
-(mapc (lambda (it)
-        (set-fontset-font t
-                          (cons (decode-char 'ucs (car it))
-                                (decode-char 'ucs (cdr it)))
-                          "Symbola"))
-      '((#x1f000 . #x1f02f)    ; Mahjong Tiles
-        (#x1f0a0 . #x1f0ff)    ; Playing Cards
-        (#x1f110 . #x1f19a)    ; Enclosed Alphanumeric Supplement
-                                        ; Regional Indicator Symbol, Enclosed Ideographic Supplement,
-                                        ; Emoticons, Transport and Map Symbols, Alchemical Symbols
-        (#x1f1e6 . #x1f8ff)))
+(set-fontset-font t nil (font-spec :name "Pragmata Pro" :size 18))
+(set-fontset-font t 'symbol (font-spec :name "Symbola" :size 18))
 
 (setq font-lock-maximum-decoration t)
 ;; Prevent emacs from creating a backup file filename~
@@ -353,7 +342,8 @@
                            (orgalist-mode)))
          (message-send . (lambda ()
                            ;; (mml-secure-message-sign-encrypt)
-                           (mml-secure-message-sign)))
+                           ;; (mml-secure-message-sign)
+                           ))
          (mu4e-compose-mode . (lambda ()
                                 (set-fill-column 65)
                                 (flyspell-mode)
@@ -386,7 +376,6 @@
         mu4e-view-image-max-width 800
         mu4e-view-show-addresses t
         mu4e-view-show-images nil
-        mu4e-show-images nil
         mu4e-completing-read-function 'ivy-completing-read)
 
   (setq mu4e-contexts
@@ -493,7 +482,6 @@
     (interactive)
     (let* ((dir (file-name-directory (or (buffer-file-name)
                                          default-directory)))
-           (height 20)
            (target-buf (get-buffer-create "*eshell*"))
            (target-window (get-buffer-window target-buf)))
       (if target-window    ;hide window if target buffer is shown
@@ -505,11 +493,9 @@
           (eshell)
           (goto-char (point-max))
           (eshell-kill-input)
-          (if (not (string= (concat (eshell/pwd) "/") dir))
-              (progn
-                (insert (concat "cd " dir))
-                (eshell/cd dir)
-                (eshell-send-input))))))))
+          (unless (string= (concat (eshell/pwd) "/") dir)
+            (insert (concat "cd \"" dir "\""))
+            (eshell-send-input)))))))
 
 (use-package eldoc                      ; Documentation in the echo area
   :ensure nil
@@ -534,19 +520,15 @@
 (use-package cc-mode
   :ensure nil
   :hook ((c++-mode . (lambda ()
-                       (add-hook 'before-save-hook 'clang-format-buffer nil 'local)
-                       (setq-local company-backends '(company-clang company-c-headers))
-                       (setq-local flycheck-gcc-language-standard "c++17")
-                       (setq-local flycheck-clang-language-standard "c++17")))
+                       (aggressive-indent-mode -1)
+                       (lsp)))
          (c-mode . (lambda ()
-                     (add-hook 'before-save-hook 'clang-format-buffer nil 'local)
-                     (setq-local company-backends '(company-clang company-c-headers))
-                     (setq-local flycheck-gcc-language-standard "c11")
-                     (setq-local flycheck-clang-language-standard "c11"))))
+                     (aggressive-indent-mode -1)
+                     (lsp))))
   :bind (:map c-mode-map
               ("C-c C-c" . projectile-compile-project)
-              ([C-M-tab] . clang-format-region)
-              ([C-return] . counsel-gtags-dwim))
+              :map c++-mode-map
+              ("C-c C-c" . projectile-compile-project))
   :config
   (require 'smartparens-c)
   (setq c-basic-offset 2))
@@ -744,8 +726,7 @@ The app is chosen from your OS's preference."
         dired-recursive-deletes 'top          ; Delete dirs recursively
         ;; -F marks links with @
         dired-ls-F-marks-symlinks t)
-  (dired-async-mode t)
-  (evil-set-initial-state 'image-mode 'emacs))
+  (dired-async-mode t))
 
 (use-package uniquify                   ; Unique buffer names
   :ensure nil
@@ -812,7 +793,8 @@ The app is chosen from your OS's preference."
   (setq evil-want-keybinding nil
         evil-cross-lines t
         evil-move-beyond-eol t
-        evil-want-fine-undo t))
+        evil-want-fine-undo t
+        evil-undo-system 'undo-fu))
 
 (use-package evil-ediff
   :after evil)
@@ -923,15 +905,14 @@ The app is chosen from your OS's preference."
 (use-package winner                     ; Winner mode
   :hook (after-init . winner-mode))
 
-(use-package undo-tree                  ; Show buffer changes as a tree
+(use-package undo-fu)
+
+(use-package undo-fu-session
+  :config
+  (setq undo-fu-session-incompatible-files '("/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
   :init
-  (setq undo-tree-visualizer-diff t
-        undo-tree-auto-save-history t
-        undo-tree-visualizer-timestamps t
-        undo-tree-enable-undo-in-region nil
-        undo-tree-history-directory-alist '(("." . "~/.config/emacs/undo")))
-  (global-undo-tree-mode -1)
-  :diminish undo-tree-mode)
+  (global-undo-fu-session-mode)
+  :diminish undo-fu-session-mode)
 
 (use-package delsel                     ; Delete the selection instead of insert
   :config (delete-selection-mode))
@@ -1419,6 +1400,7 @@ The app is chosen from your OS's preference."
                  slime-asdf
                  slime-sprof
                  slime-tramp
+                 slime-media
                  slime-xref-browser
                  slime-sbcl-exts
                  slime-hyperdoc
@@ -1577,10 +1559,6 @@ The app is chosen from your OS's preference."
 ;;; Other languages
 (use-package json-mode                  ; JSON editing
   :mode "\\.json\\'")
-
-(use-package clang-format               ; Clang format C/C++ code
-  :config
-  (setq clang-format-style "LLVM"))
 
 (use-package go-mode
   :hook (go-mode . (lambda ()
