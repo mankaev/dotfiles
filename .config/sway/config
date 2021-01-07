@@ -1,21 +1,30 @@
 exec swaylock
 
+# xwayland disable
+
 # Logo key
 set $mod Mod4
 
+font pango:Pragmata Pro 10
+
 # Your preferred terminal emulator
-set $term termite
+set $term st
 
 default_border pixel 0
 default_floating_border pixel 0
 titlebar_border_thickness 0
 
-for_window [class=".*"] floating disable
+hide_edge_borders --i3 both
+
+workspace_layout tabbed
 
 ### Output configuration
 #
 # output eDP-1 resolution 1600x900 position 0,0
 # output HDMI-2 resolution 1920x1080 position 1600,0
+
+workspace 1 output eDP-1
+workspace 9 output HDMI-A-2
 
 output * bg "#3F3F3F" solid_color
 
@@ -36,105 +45,130 @@ input 1:1:AT_Translated_Set_2_keyboard {
   xkb_layout us,ru
   xkb_options grp:shifts_toggle
   repeat_rate 40
-  repeat_delay 250
+  repeat_delay 350
 }
 
+# input 4292:33032:YSPRINGTECH_USB_OPTICAL_MOUSE {
+#   natural_scroll enabled
+#   left_handed enabled
+#   scroll_factor 2
+#   dwt enabled
+# }
+
 # start a terminal
-bindsym $mod+Return exec $term
+bindsym --to-code $mod+Return exec $term
 
 # kill focused window
 bindsym $mod+Shift+k kill
 
 # Make the current focus fullscreen
-bindsym $mod+f fullscreen
+bindsym --to-code $mod+f fullscreen
 
 # Make the current focus fullscreen
-bindsym $mod+b border toggle
-bindsym $mod+t layout toggle tabbed splith
+bindsym --to-code $mod+b border toggle
+bindsym --to-code $mod+t layout toggle tabbed splith
 
 # restarts sway
-bindsym $mod+Shift+r restart
+bindsym --to-code $mod+Shift+r restart
 # reload the configuration file
-bindsym $mod+Shift+c reload
+bindsym --to-code $mod+Shift+c reload
 
 # exit sway (logs you out of your Wayland session)
-bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -b 'Yes, exit sway' 'swaymsg exit'
+bindsym --to-code $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -b 'Yes, exit sway' 'swaymsg exit'
 
 # switch to workspace
-bindsym $mod+1 workspace 1
-bindsym $mod+2 workspace 2
-bindsym $mod+3 workspace 3
-bindsym $mod+4 workspace 4
-bindsym $mod+5 workspace 5
-bindsym $mod+6 workspace 6
-bindsym $mod+7 workspace 7
-bindsym $mod+8 workspace 8
-bindsym $mod+9 workspace 9
-bindsym $mod+0 workspace 10
+bindsym --to-code $mod+1 workspace 1
+bindsym --to-code $mod+2 workspace 2
+bindsym --to-code $mod+3 workspace 3
+bindsym --to-code $mod+4 workspace 4
+bindsym --to-code $mod+5 workspace 5
+bindsym --to-code $mod+6 workspace 6
+bindsym --to-code $mod+7 workspace 7
+bindsym --to-code $mod+8 workspace 8
+bindsym --to-code $mod+9 workspace 9
+bindsym --to-code $mod+0 workspace 10
 
 # move focused container to workspace
-bindsym $mod+Shift+1 move container to workspace 1
-bindsym $mod+Shift+2 move container to workspace 2
-bindsym $mod+Shift+3 move container to workspace 3
-bindsym $mod+Shift+4 move container to workspace 4
-bindsym $mod+Shift+5 move container to workspace 5
-bindsym $mod+Shift+6 move container to workspace 6
-bindsym $mod+Shift+7 move container to workspace 7
-bindsym $mod+Shift+8 move container to workspace 8
-bindsym $mod+Shift+9 move container to workspace 9
-bindsym $mod+Shift+0 move container to workspace 10
+bindsym --to-code $mod+Shift+1 move container to workspace 1
+bindsym --to-code $mod+Shift+2 move container to workspace 2
+bindsym --to-code $mod+Shift+3 move container to workspace 3
+bindsym --to-code $mod+Shift+4 move container to workspace 4
+bindsym --to-code $mod+Shift+5 move container to workspace 5
+bindsym --to-code $mod+Shift+6 move container to workspace 6
+bindsym --to-code $mod+Shift+7 move container to workspace 7
+bindsym --to-code $mod+Shift+8 move container to workspace 8
+bindsym --to-code $mod+Shift+9 move container to workspace 9
+bindsym --to-code $mod+Shift+0 move container to workspace 10
 
 # start dmenu (a program launcher)
-bindsym $mod+p exec dmenu_run -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200
+bindsym --to-code $mod+p exec dmenu_run -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200
 
 # start passmenu (a password manager)
-bindsym $mod+m exec passmenu -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200 -l 10
+bindsym --to-code $mod+m exec passmenu -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200 -l 10
 
 # make screenshot
-bindsym $mod+Print exec grim screenshot.png
+bindsym --to-code $mod+Print exec grim screenshot.png
 
 # move focused window
-bindsym $mod+l exec swaylock
+bindsym --to-code $mod+l exec swaylock
 
-bindsym $mod+j focus left
-bindsym $mod+k focus right
+bindsym --to-code $mod+j focus left
+bindsym --to-code $mod+k focus right
 
 # Increase sound volume
-bindsym XF86AudioRaiseVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') +3%
+bindsym --to-code XF86AudioRaiseVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') +3%
 # Decrease sound volume
-bindsym XF86AudioLowerVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') -2%
+bindsym --to-code XF86AudioLowerVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') -2%
 # Mute sound
-bindsym XF86AudioMute exec pactl set-sink-mute $(pacmd list-sinks |awk '/* index:/{print $3}') toggle
+bindsym --to-code XF86AudioMute exec pactl set-sink-mute $(pacmd list-sinks |awk '/* index:/{print $3}') toggle
 
 # Accept phone call by adb
-bindsym XF86Explorer exec adb shell input keyevent 5
+bindsym --to-code XF86Explorer exec adb shell input keyevent 5
 
 # Disconnect phone call by adb
-bindsym XF86LaunchA exec adb shell input keyevent 6
+bindsym --to-code XF86LaunchA exec adb shell input keyevent 6
 
 # Find a contact and call them
-bindsym XF86Search exec call_phone
+bindsym --to-code XF86Search exec call_phone
 
 # Media player daemon control keys
-bindsym $mod+Ctrl+p exec mpc toggle
-bindsym $mod+Ctrl+s exec mpc stop
-bindsym $mod+Ctrl+k exec mpc prev
-bindsym $mod+Ctrl+j exec mpc next
-bindsym $mod+Ctrl+h exec mpc seek -00:00:05
-bindsym $mod+Ctrl+l exec mpc seek +00:00:05
+bindsym --to-code $mod+Ctrl+p exec mpc toggle
+bindsym --to-code $mod+Ctrl+s exec mpc stop
+bindsym --to-code $mod+Ctrl+k exec mpc prev
+bindsym --to-code $mod+Ctrl+j exec mpc next
+bindsym --to-code $mod+Ctrl+h exec mpc seek -00:00:05
+bindsym --to-code $mod+Ctrl+l exec mpc seek +00:00:05
 
-assign [class="Emacs"]        1
+assign [app_id="Emacs"]       1
+# assign [class="Emacs"]        1
 assign [app_id="termite"]     2
-assign [class="Firefox"]      3
+assign [app_id="st"]     2
+# assign [class="Firefox"]      3
+assign [app_id="firefox"]     3
 assign [app_id="chromium"]    4
 assign [app_id="xfreerdp"]    4
 assign [app_id="calibre"]     5
 assign [app_id="shotwell"]    6
-assign [app_id="Psi+"]        7
+assign [app_id="psi+"]        7
 
-exec mako
-exec termite
-exec firefox
+exec xrdb -load ~/.Xresources
+
+exec swayidle -w \
+         timeout 300 'swaylock -f -c 000000' \
+         timeout 600 'swaymsg "output * dpms off"' \
+              resume 'swaymsg "output * dpms on"' \
+         before-sleep 'swaylock -f -c 000000'
+
 exec emacs
+exec mako
+# exec termite
+exec st
+exec firefox
+exec calibre
+
+exec sudo rfkill unblock all
+exec sudo systemctl restart iwd
+exec sudo systemctl restart systemd-resolved
+exec sudo systemctl restart systemd-networkd
 
 include /etc/sway/config.d/*
