@@ -8,7 +8,7 @@ set $mod Mod4
 font pango:Pragmata Pro 10
 
 # Your preferred terminal emulator
-set $term st
+set $term termite
 
 default_border pixel 0
 default_floating_border pixel 0
@@ -59,7 +59,7 @@ input 1:1:AT_Translated_Set_2_keyboard {
 bindsym --to-code $mod+Return exec $term
 
 # kill focused window
-bindsym $mod+Shift+k kill
+bindsym --to-code $mod+Shift+k kill
 
 # Make the current focus fullscreen
 bindsym --to-code $mod+f fullscreen
@@ -101,10 +101,10 @@ bindsym --to-code $mod+Shift+9 move container to workspace 9
 bindsym --to-code $mod+Shift+0 move container to workspace 10
 
 # start dmenu (a program launcher)
-bindsym --to-code $mod+p exec dmenu_run -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200
+bindsym --to-code $mod+p exec wofi --show run
 
 # start passmenu (a password manager)
-bindsym --to-code $mod+m exec passmenu -fn "Pragmata Pro:size=32" -w 600 -x 500 -y 200 -l 10
+bindsym --to-code $mod+m exec /home/halapenio/bin/passmenu
 
 # make screenshot
 bindsym --to-code $mod+Print exec grim screenshot.png
@@ -139,15 +139,11 @@ bindsym --to-code $mod+Ctrl+j exec mpc next
 bindsym --to-code $mod+Ctrl+h exec mpc seek -00:00:05
 bindsym --to-code $mod+Ctrl+l exec mpc seek +00:00:05
 
-assign [app_id="Emacs"]       1
-# assign [class="Emacs"]        1
+assign [class="Emacs"]        1
 assign [app_id="termite"]     2
-assign [app_id="st"]     2
-# assign [class="Firefox"]      3
 assign [app_id="firefox"]     3
-assign [app_id="chromium"]    4
-assign [app_id="xfreerdp"]    4
-assign [app_id="calibre"]     5
+assign [app_id="Chromium"]    4
+assign [app_id="calibre-gui"] 5
 assign [app_id="shotwell"]    6
 assign [app_id="psi+"]        7
 
@@ -161,8 +157,7 @@ exec swayidle -w \
 
 exec emacs
 exec mako
-# exec termite
-exec st
+exec termite
 exec firefox
 exec calibre
 
