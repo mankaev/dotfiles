@@ -1,0 +1,2 @@
+#!/bin/bash
+TZ=UTC ionice -c 2 -n 7 nice -n 19 /usr/bin/telegram-desktop -scale 165
