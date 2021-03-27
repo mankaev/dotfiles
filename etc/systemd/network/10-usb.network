@@ -1,11 +1,10 @@
 [Match]
-Name=wlan0
+MACAddress=e2:4d:bb:c2:a0:ba
 
 [Network]
 MulticastDNS=true
 DHCP=true
-DNS=127.0.0.53
 
 [DHCP]
-UseDNS=false
+UseDNS=true
 Anonymize=true
