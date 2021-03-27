@@ -4,7 +4,6 @@ Name=wlan0
 [Network]
 MulticastDNS=true
 DHCP=true
-DNS=127.0.0.53
 
 [DHCP]
 UseDNS=false
