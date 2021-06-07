@@ -30,7 +30,7 @@
 (setq load-prefer-newer t)              ; Always load newer compiled files
 (setq ad-redefinition-action 'accept)   ; Silence advice redefinition warnings
 (setq message-log-max 10000)            ; Debugging
-
+(setq warning-minimum-level :emergency)
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file) (load custom-file))
 
@@ -51,7 +51,9 @@
 (setq auth-sources '("~/.authinfo.gpg"))
 
 ;; This makes long-line buffers usable
-(setq-default bidi-display-reordering nil)
+(setq-default bidi-display-reordering nil
+              bidi-inhibit-bpa t
+              bidi-paragraph-direction nil)
 
 ;; Disable tabs, but given them proper width
 (setq-default indent-tabs-mode nil
@@ -123,7 +125,9 @@
 
 ;; Fonts used:
 (set-fontset-font t nil (font-spec :name "Pragmata Pro" :size 18))
-(set-fontset-font t 'symbol (font-spec :name "Noto Color Emoji" :size 18))
+(set-fontset-font t 'symbol (font-spec :name "Symbola" :size 18))
+(set-fontset-font t 'symbol (font-spec :name "Noto Color Emoji" :size 18) nil 'append)
+(set-face-attribute 'default nil :family "Pragmata Pro" :height 180 :weight 'normal :width 'normal)
 
 (setq font-lock-maximum-decoration t)
 ;; Prevent emacs from creating a backup file filename~
@@ -215,10 +219,6 @@
   :ensure nil
   :init (setq fortune-file (expand-file-name "~/.config/emacs/lambda.txt")))
 
-(use-package so-long
-  :ensure nil
-  :diminish so-long-mode)
-
 (use-package hideshow
   :ensure nil
   :hook (prog-mode . hs-minor-mode)
@@ -236,7 +236,7 @@
 (use-package text-mode
   :ensure nil
   :hook (text-mode . auto-fill-mode)
-  :config (setq-default fill-column 65)
+  :init (setq-default fill-column 65)
   :diminish auto-fill-function)
 
 (use-package grep
@@ -338,8 +338,7 @@
   :ensure nil
   :commands mu4e
   :hook ((message-mode . (lambda () ;; Use Org structures and tables in message mode
-                           (turn-on-orgtbl)
-                           (orgalist-mode)))
+                           (turn-on-orgtbl)))
          (message-send . (lambda ()
                            ;; (mml-secure-message-sign-encrypt)
                            ;; (mml-secure-message-sign)
@@ -374,8 +373,7 @@
         mu4e-user-mail-address-list '("mankaev@gmail.com")
         mu4e-view-image-max-width 800
         mu4e-view-show-addresses t
-        mu4e-view-show-images nil
-        mu4e-completing-read-function 'ivy-completing-read)
+        mu4e-view-show-images nil)
 
   (setq mu4e-contexts
         `( ,(make-mu4e-context
@@ -420,7 +418,7 @@
   (setq mail-user-agent 'mu4e-user-agent
         read-mail-command    'mu4e
         gnus-dired-mail-mode 'mu4e-user-agent)
-  (setq message-send-mail-function 'async-smtpmail-send-it
+  (setq message-send-mail-function 'smtpmail-send-it
         message-required-mail-headers '(From Subject Date (optional . In-Reply-To))
         mail-specify-envelope-from t ; Use from field to specify sender name.
         message-kill-buffer-on-exit t
@@ -499,9 +497,7 @@
 (use-package eldoc                      ; Documentation in the echo area
   :ensure nil
   :hook (eval-expression-minibuffer-setup . eldoc-mode)
-  :config
-  ;; Enable Eldoc for `eval-expression', too
-  (setq-default eldoc-documentation-function #'describe-char-eldoc)
+  :init
   (setq eldoc-idle-delay 0.1)  ; Show eldoc more promptly
   (global-eldoc-mode -1)
   :diminish eldoc-mode)
@@ -774,13 +770,13 @@ The app is chosen from your OS's preference."
               ("SPC"    . avy-goto-word-1)
               ("C-SPC"  . avy-goto-line)
               ([escape] . keyboard-quit)
-         :map evil-operator-state-map
+              :map evil-operator-state-map
               ([escape] . evil-normal-state)
-         :map evil-emacs-state-map
+              :map evil-emacs-state-map
               ([escape] . evil-normal-state)
-         :map evil-visual-state-map
+              :map evil-visual-state-map
               ([escape] . keyboard-quit)
-         :map evil-motion-state-map
+              :map evil-motion-state-map
               ([escape] . evil-normal-state))
   :init
   (setq evil-emacs-state-cursor '("red" box)
@@ -793,7 +789,7 @@ The app is chosen from your OS's preference."
         evil-cross-lines t
         evil-move-beyond-eol t
         evil-want-fine-undo t
-        evil-undo-system 'undo-fu))
+        evil-undo-system 'undo-redo))
 
 (use-package evil-ediff
   :after evil)
@@ -899,19 +895,21 @@ The app is chosen from your OS's preference."
         eyebrowse-new-workspace t
         eyebrowse-wrap-around t)
   (eyebrowse-setup-opinionated-keys)
-  (eyebrowse-mode))
+  (eyebrowse-mode)
+  (add-to-list 'window-persistent-parameters '(window-side . writable))
+  (add-to-list 'window-persistent-parameters '(window-slot . writable)))
 
 (use-package winner                     ; Winner mode
   :hook (after-init . winner-mode))
 
-(use-package undo-fu)
+;; (use-package undo-fu)
 
-(use-package undo-fu-session
-  :config
-  (setq undo-fu-session-incompatible-files '("/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
-  :init
-  (global-undo-fu-session-mode)
-  :diminish undo-fu-session-mode)
+;; (use-package undo-fu-session
+;;   :config
+;;   (setq undo-fu-session-incompatible-files '("/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
+;;   :init
+;;   (global-undo-fu-session-mode)
+;;   :diminish undo-fu-session-mode)
 
 (use-package delsel                     ; Delete the selection instead of insert
   :config (delete-selection-mode))
@@ -952,7 +950,8 @@ The app is chosen from your OS's preference."
 (use-package recentf                    ; Manage recent files
   :config
   (setq recentf-max-saved-items 200
-        recentf-max-menu-items 15))
+        recentf-max-menu-items 15)
+  :init (recentf-mode 1))
 
 (use-package markdown-mode              ; Edit markdown files
   :hook (markdown-mode . auto-fill-mode)
@@ -997,12 +996,6 @@ The app is chosen from your OS's preference."
 (use-package company-web                ; Backend for web development
   :after company)
 
-(use-package company-jedi               ; Python backend for Company
-  :after company
-  :config
-  (setq jedi:complete-on-dot t
-        jedi:imenu-create-index-function 'jedi:create-flat-imenu-index))
-
 (use-package company-restclient         ; Company support for restclient
   :after company)
 
@@ -1025,16 +1018,15 @@ The app is chosen from your OS's preference."
         flyspell-issue-message-flag nil)
   :diminish flyspell-mode)
 
-(use-package flyspell-correct-ivy
-  :after (flyspell ivy)
+(use-package flyspell-correct
+  :after (flyspell selectrum)
   :bind (:map flyspell-mode-map
               ("C-;" . flyspell-correct-wrapper))
-  :init (setq flyspell-correct-interface #'flyspell-correct-ivy))
+  :init (setq flyspell-correct-interface #'flyspell-correct-dummy))
 
 (use-package projectile                 ; Project management
-  :config
+  :init
   (setq projectile-enable-caching t
-        projectile-completion-system 'ivy
         projectile-globally-ignored-files '("TAGS" "GPATH" "GRTAGS" "GTAGS" "ID")
         projectile-find-dir-includes-top-level t)
 
@@ -1045,38 +1037,32 @@ The app is chosen from your OS's preference."
   :pin melpa-stable)
 
 (use-package magit                      ; The best Git client out there
+  :after evil-collection
+  :hook (magit-pre-refresh-hook . diff-hl-magit-pre-refresh)
+  :hook (magit-post-refresh-hook . diff-hl-magit-post-refresh)
   :init
-  (setq vc-handled-backends '(Git)
-        vc-follow-symlinks nil
-        magit-completing-read-function 'ivy-completing-read
-        magit-delete-by-moving-to-trash nil
-        magit-diff-use-overlays nil
-        magit-refs-show-commit-count 'all
-        magit-diff-refine-hunk 'all
-        magit-save-repository-buffers 'dontask
-        magit-use-overlays nil
-        git-commit-fill-column 65
-        git-commit-summary-max-length 65
-        git-commit-finish-query-functions nil)
-  ;; Show status buffer in fullscreen
-  (setq magit-display-buffer-function
-        #'magit-display-buffer-fullframe-status-v1)
-  :diminish (magit-wip-after-save-local-mode
-             magit-wip-before-change-mode))
-
-(use-package evil-magit
-  :after (evil evil-collection magit)
-  :config
   (defun my-magit-kill-buffers ()
     "Restore window configuration and kill all Magit buffers."
     (interactive)
     (let ((buffers (magit-mode-get-buffers)))
       (magit-restore-window-configuration)
       (mapc #'kill-buffer buffers)))
-  :init
-  (evil-magit-init)
-  (evil-collection-define-key 'normal
-    'magit-status-mode-map "q" 'my-magit-kill-buffers))
+  (setq vc-handled-backends '(Git)
+        vc-follow-symlinks nil
+        magit-delete-by-moving-to-trash nil
+        magit-diff-use-overlays nil
+        magit-refs-show-commit-count 'all
+        magit-diff-refine-hunk 'all
+        magit-save-repository-buffers 'dontask
+        magit-use-overlays nil
+        git-commit-summary-max-length 65
+        git-commit-finish-query-functions nil)
+  ;; Show status buffer in fullscreen
+  (setq magit-display-buffer-function
+        #'magit-display-buffer-fullframe-status-v1)
+  (evil-collection-define-key 'normal 'magit-status-mode-map "q" 'my-magit-kill-buffers)
+  :diminish (magit-wip-after-save-local-mode
+             magit-wip-before-change-mode))
 
 (use-package evil-org
   :after org
@@ -1089,7 +1075,6 @@ The app is chosen from your OS's preference."
 (use-package evil-smartparens
   :after (evil smartparens)
   :hook (smartparens-enabled . evil-smartparens-mode))
-
 
 (use-package git-commit                 ; Git commit message mode
   :config
@@ -1251,18 +1236,6 @@ The app is chosen from your OS's preference."
 (use-package gnuplot-mode)
 
 ;;; Programming utilities
-(use-package python                     ; Python editing
-  :bind (:map python-mode-map
-              ([C-return] . jedi:goto-definition))
-  :hook ((inferior-python-mode . company-mode)
-         (python-mode . (lambda ()
-                          (setq-local company-backends '(company-jedi))
-                          (setq fill-column 79)))
-         (ein:connect-mode . ein:jedi-setup))
-  :config
-  (setq python-indent-offset 2)
-  (jedi:setup))
-
 (use-package elisp-def
   :hook ((emacs-lisp-mode
           ielm-mode) . elisp-def-mode)
@@ -1390,9 +1363,7 @@ The app is chosen from your OS's preference."
                         (setq-local lisp-indent-function 'common-lisp-indent-function)
                         (setq-local lisp-lambda-list-keyword-parameter-alignment t)
                         (setq-local lisp-loop-indent-forms-like-keywords t)
-                        (setq-local lisp-loop-indent-subclauses nil)
-                        (eldoc-mode -1)
-                        (turn-on-redshank-mode)))
+                        (setq-local lisp-loop-indent-subclauses nil)))
   :init
   (slime-setup '(slime-fancy
                  slime-quicklisp
@@ -1462,8 +1433,7 @@ The app is chosen from your OS's preference."
 (use-package elfeed
   :init
   (setq elfeed-feeds
-        '("https://old.reddit.com/user/lispm/.rss"
-          "https://www.archlinux.org/feeds/news/"
+        '("https://www.archlinux.org/feeds/news/"
           "https://www.parabola.nu/feeds/news/"
           "http://planet.lisp.org/rss20.xml"
           "http://planet.emacslife.com/atom.xml")))
@@ -1542,19 +1512,6 @@ The app is chosen from your OS's preference."
   :hook (js2-mode . js2-refactor-mode)
   :config (js2r-add-keybindings-with-prefix "C-c m r"))
 
-(use-package php-mode                   ; Better PHP support
-  :hook (php-mode . (lambda ()
-                      (require 'ac-php)
-                      (require 'company-php)
-                      (setq-local company-backends '(company-ac-php-backend))))
-  :bind (:map php-mode-map
-              ("C-t" . ac-php-location-stack-back)
-              ([C-return] . ac-php-find-symbol-at-point))
-  :mode "\\.php\\'"
-  :config
-  (use-package ac-php)
-  (use-package company-php))
-
 ;;; Other languages
 (use-package json-mode                  ; JSON editing
   :mode "\\.json\\'")
@@ -1566,10 +1523,6 @@ The app is chosen from your OS's preference."
   :bind (:map go-mode-map
               ("C-c C-r" . go-remove-unused-imports)
               ([C-return] . godef-jump)))
-
-(use-package fennel-mode
-  :bind (:map fennel-mode-map
-              ("M-s j" . run-lisp)))
 
 (use-package cmake-mode
   :mode "CMakeLists\\.txt\\.cmake\\'"
@@ -1640,34 +1593,50 @@ The app is chosen from your OS's preference."
       (let ((inhibit-read-only t))
         (ansi-color-apply-on-region (point-min) (point-max))))))
 
-(use-package counsel
-  :ensure smex
+(use-package consult
   :hook (find-file . (lambda ()
                        (when (and (not (file-writable-p buffer-file-name))
                                   (eq system-type 'gnu/linux)
                                   (eq 0 (nth 3 (file-attributes buffer-file-name))))
                          (find-alternate-file (concat "/sudo:root@localhost:" buffer-file-name)))))
-  :bind (("M-s i"   . counsel-imenu)
-         ("C-x C-r" . counsel-recentf)
-         ("M-s b"   . counsel-bookmark)
-         ("M-y"     . counsel-yank-pop)
+  :hook (completion-list-mode . consult-preview-at-point-mode)
+  :bind (("M-s i"   . consult-imenu)
+         ("M-s I"   . consult-project-imenu)
+         ("M-s r"   . consult-ripgrep)
+         ("C-x C-r" . consult-recent-file)
+         ("C-x b"   . consult-buffer)
+         ("C-x C-b" . consult-buffer)
+         ("M-s b"   . consult-bookmark)
+         ("M-s s"   . consult-line)
+         ("M-s l"   . consult-goto-line)
+         ("M-s m"   . consult-man)
+         ("M-s f"   . consult-find)
+         ("M-y"     . consult-yank-pop)
          ("M-s k"   . bury-buffer)
-         ("M-<tab>" . ivy-switch-buffer)
-         ("C-x C-k" . kill-current-buffer) ; Kill only the current buffer
-         :map counsel-mode-map
-         ([escape] . minibuffer-keyboard-quit))
-  :config
-  (setq counsel-git-cmd "rg --files"
-        counsel-rg-base-command "rg -i -M 120 --no-heading --line-number --color never %s ."
-        counsel-grep-base-command "rg -i -M 120 --no-heading --line-number --color never '%s' %s")
+         ("C-x C-k" . kill-current-buffer))
+  :init
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref)
+  (setq register-preview-delay 0
+        register-preview-function #'consult-register-format)
+  (setq consult-project-root-function #'projectile-project-root
+        consult-after-jump-hook
+        consult-find-command "fd --color=never --full-path ARG OPTS")
+  :diminish consult-mode)
 
-  (counsel-mode)
-  :diminish counsel-mode)
+(use-package selectrum
+  :init
+  (setq selectrum-num-candidates-displayed '15)
+  (selectrum-mode +1))
 
-(use-package counsel-projectile
-  :after (projectile counsel)
-  :bind (:map projectile-mode-map
-              ("M-s a"   . counsel-projectile-rg)))
+(use-package selectrum-prescient
+  :init
+  (selectrum-prescient-mode +1)
+  (prescient-persist-mode +1))
+
+(use-package company-prescient
+  :after (company selectrum-prescient)
+  :init (company-prescient-mode +1))
 
 (use-package dash-docs
   :init
@@ -1675,34 +1644,6 @@ The app is chosen from your OS's preference."
         dash-docs-common-docsets '("Emacs_Lisp" "Common_Lisp" "Scala" "Clojure" "PostgreSQL")
         dash-docs-docsets-path "~/.docset"
         dash-docs-enable-debugging nil))
-
-(use-package find-file-in-project
-  :after projectile
-  :bind (:map projectile-mode-map
-              ("M-s f"   . find-file-in-project-by-selected))
-  :config (setq ffip-use-rust-fd t))
-
-(use-package swiper
-  :bind (("M-s s"   . swiper))
-  :init
-  (setq swiper-use-visual-line nil
-        swiper-use-visual-line-p (lambda (a) nil)))
-
-(use-package ivy
-  :bind (("C-x C-b" . ivy-switch-buffer)
-         :map ivy-minibuffer-map
-         ("M-<tab>" . ivy-next-line)
-         ([tab]     . ivy-alt-done))
-  :init
-  (setq ivy-count-format "(%d/%d) "  ; do not count candidates
-        ivy-height 17                ; number of result lines to display
-        ivy-initial-inputs-alist nil ; no regexp by default
-        ivy-use-virtual-buffers t    ; add ‘recentf-mode’ and bookmarks to ‘ivy-switch-buffer’.
-        ivy-wrap t
-        ivy-re-builders-alist '((t . ivy--regex-plus)))
-  (ivy-mode)
-  (ivy-configure 'counsel-imenu :update-fn 'auto)
-  :diminish ivy-mode)
 
 (use-package guix)
 
@@ -1713,10 +1654,6 @@ The app is chosen from your OS's preference."
   (mu4e-alert-set-default-style 'libnotify)
   (mu4e-alert-enable-mode-line-display)
   (mu4e-alert-enable-notifications))
-
-(use-package pdf-tools
-  :magic ("%PDF" . pdf-view-mode)
-  :config (pdf-tools-install :no-query))
 
 (use-package transmission
   :config
