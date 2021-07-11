@@ -35,8 +35,8 @@ load-module module-switch-on-port-available
 ### Load audio drivers statically
 ### (it's probably better to not load these drivers manually, but instead
 ### use module-udev-detect -- see below -- for doing this automatically)
-load-module module-alsa-sink
-load-module module-alsa-source device=hw:1,0
+#load-module module-alsa-sink
+#load-module module-alsa-source device=hw:1,0
 #load-module module-oss device="/dev/dsp" sink_name=output source_name=input
 #load-module module-oss-mmap device="/dev/dsp" sink_name=output source_name=input
 #load-module module-null-sink
@@ -44,7 +44,7 @@ load-module module-alsa-source device=hw:1,0
 
 ### Automatically load driver modules depending on the hardware available
 .ifexists module-udev-detect.so
-load-module module-udev-detect
+load-module module-udev-detect tsched=0
 .else
 ### Use the static hardware detection module (for systems that lack udev support)
 load-module module-detect
@@ -67,6 +67,7 @@ load-module module-bluetooth-discover
 .endif
 
 ### Load several protocols
+load-module module-dbus-protocol
 .ifexists module-esound-protocol-unix.so
 load-module module-esound-protocol-unix
 .endif
@@ -85,24 +86,21 @@ load-module module-native-protocol-unix
 #load-module module-null-sink sink_name=rtp format=s16be channels=2 rate=44100 sink_properties="device.description='RTP Multicast Sink'"
 #load-module module-rtp-send source=rtp.monitor
 
-### Load additional modules from GConf settings. This can be configured with the paprefs tool.
+### Load additional modules from GSettings. This can be configured with the paprefs tool.
 ### Please keep in mind that the modules configured by paprefs might conflict with manually
 ### loaded modules.
-.ifexists module-gconf.so
+.ifexists module-gsettings.so
 .nofail
-load-module module-gconf
+load-module module-gsettings
 .fail
 .endif
+
 
 ### Automatically restore the default sink/source when changed by the user
 ### during runtime
 ### NOTE: This should be loaded as early as possible so that subsequent modules
 ### that look up the default sink/source get the right value
 load-module module-default-device-restore
-
-### Automatically move streams to the default sink if the sink they are
-### connected to dies, similar for sources
-load-module module-rescue-streams
 
 ### Make sure we always have a sink around, even if it is a null sink.
 load-module module-always-sink
