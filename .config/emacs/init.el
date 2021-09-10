@@ -50,6 +50,8 @@
 
 (setq auth-sources '("~/.authinfo.gpg"))
 
+(setq native-comp-async-report-warnings-errors nil)
+
 ;; This makes long-line buffers usable
 (setq-default bidi-display-reordering nil
               bidi-inhibit-bpa t
@@ -414,7 +416,7 @@
           ("mime:image/*" "Messages with images" ?p)
           ("maildir:/trash" "Trash" ?s)
           ("maildir:/drafts" "Drafts" ?d)))
-  (require 'smtpmail-async)
+  (require 'smtpmail)
   (setq mail-user-agent 'mu4e-user-agent
         read-mail-command    'mu4e
         gnus-dired-mail-mode 'mu4e-user-agent)
@@ -448,8 +450,8 @@
   :bind (("M-s t"   . eshell-toggle))
   :hook (eshell-mode . (lambda ()
                          (company-mode)
-                         (setq-local company-backends '(company-capf company-files company-sh))
-                         (setq-local company-idle-delay 0.7)
+                         (setq-local company-backends '(company-capf company-files company-sh)
+                                     company-idle-delay 0.7)
                          ;; Hack to define key in eshell-mode
                          (define-key eshell-mode-map (kbd "M-s") nil)
                          (define-key eshell-mode-map (kbd "M-s t") 'eshell-toggle)
@@ -516,9 +518,11 @@
   :ensure nil
   :hook ((c++-mode . (lambda ()
                        (aggressive-indent-mode -1)
+                       (lsp-headerline-breadcrumb-mode -1)
                        (lsp)))
          (c-mode . (lambda ()
                      (aggressive-indent-mode -1)
+                     (lsp-headerline-breadcrumb-mode -1)
                      (lsp))))
   :bind (:map c-mode-map
               ("C-c C-c" . projectile-compile-project)
@@ -585,7 +589,7 @@
         erc-insert-away-timestamp-function 'erc-insert-timestamp-left
         erc-log-channels-directory "~/.config/emacs/erc"
         erc-query-display 'buffer
-        erc-join-buffer 'bury
+        erc-join-buffer 'buffer
         erc-prompt-for-nickserv-password nil ; Do not ask for password
         erc-prompt-for-password nil ; Do not ask for password
         erc-save-buffer-on-part nil
@@ -937,7 +941,6 @@ The app is chosen from your OS's preference."
 (use-package bookmark                   ; Bookmarks to files and directories
   :config
   (setq bookmark-completion-ignore-case nil))
-  ;;(bookmark-maybe-load-default-file))
 
 (use-package flycheck                   ; On-the-fly syntax checker
   :init
@@ -1280,8 +1283,8 @@ The app is chosen from your OS's preference."
   :hook (clojure-mode . (lambda ()
                           (setq-local completion-at-point-functions
                                       (remove 'tags-completion-at-point-function
-                                              completion-at-point-functions))
-                          (setq-local company-backends '(company-capf))))
+                                              completion-at-point-functions)
+                                      company-backends '(company-capf))))
   :bind (:map clojure-mode-map
               ("M-s j" . cider-jack-in)
               ("M-s J" . cider-jack-in-cljs))
@@ -1348,22 +1351,24 @@ The app is chosen from your OS's preference."
 
 (use-package slime
   :after (projectile evil evil-collection)
-  :mode ((".sbclrc\\'" . common-lisp-mode))
+  :mode (("\\.cl'" . common-lisp-mode)
+         ("\\.sbclrc\\'" . common-lisp-mode))
   :bind (:map slime-mode-map
               ([C-return] . slime-edit-definition))
   :hook (slime-repl-mode . (lambda ()
                              (hs-minor-mode)
                              (define-key slime-repl-mode-map (kbd "M-s") nil)
                              (local-set-key [(control l)] 'slime-repl-clear-buffer)
-                             (setq-local company-backends '((company-slime company-yasnippet)))
-                             (setq-local browse-url-browser-function 'eww-browse-url)))
+                             (setq-local company-backends '((company-slime company-yasnippet))
+                                         browse-url-browser-function 'eww-browse-url)))
   :hook (slime-mode . (lambda ()
-                        (setq-local browse-url-browser-function 'eww-browse-url)
-                        (setq-local company-backends '((company-slime company-yasnippet)))
-                        (setq-local lisp-indent-function 'common-lisp-indent-function)
-                        (setq-local lisp-lambda-list-keyword-parameter-alignment t)
-                        (setq-local lisp-loop-indent-forms-like-keywords t)
-                        (setq-local lisp-loop-indent-subclauses nil)))
+                        (slime-highlight-edits-mode)
+                        (setq-local browse-url-browser-function 'eww-browse-url
+                                    company-backends '((company-slime company-yasnippet))
+                                    lisp-indent-function 'common-lisp-indent-function
+                                    lisp-lambda-list-keyword-parameter-alignment t
+                                    lisp-loop-indent-forms-like-keywords t
+                                    lisp-loop-indent-subclauses nil)))
   :init
   (slime-setup '(slime-fancy
                  slime-quicklisp
@@ -1374,6 +1379,7 @@ The app is chosen from your OS's preference."
                  slime-xref-browser
                  slime-sbcl-exts
                  slime-hyperdoc
+                 slime-highlight-edits
                  slime-company))
 
   (defadvice slime-repl-emit (around slime-repl-ansi-colorize activate compile)
@@ -1434,9 +1440,7 @@ The app is chosen from your OS's preference."
   :init
   (setq elfeed-feeds
         '("https://www.archlinux.org/feeds/news/"
-          "https://www.parabola.nu/feeds/news/"
-          "http://planet.lisp.org/rss20.xml"
-          "http://planet.emacslife.com/atom.xml")))
+          "http://pnprpg.ru/feed/rss/")))
 
 ;; Dired hacks
 (use-package dired-hacks-utils)
@@ -1620,7 +1624,6 @@ The app is chosen from your OS's preference."
   (setq register-preview-delay 0
         register-preview-function #'consult-register-format)
   (setq consult-project-root-function #'projectile-project-root
-        consult-after-jump-hook
         consult-find-command "fd --color=never --full-path ARG OPTS")
   :diminish consult-mode)
 
