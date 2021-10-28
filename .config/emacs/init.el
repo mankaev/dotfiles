@@ -4,7 +4,7 @@
 ;;; Commentary:
 
 ;;; Code:
-(let ((minver "27.1"))
+(let ((minver "28.0"))
   (when (version< emacs-version minver)
     (error "This config requires >=%s version of Emacs" minver)))
 
@@ -173,8 +173,7 @@
 (setq pop-up-frame-function (lambda () (selected-frame)))
 (setq pop-up-windows nil)               ; No popup windows
 
-(setq frame-resize-pixelwise t ; Resize by pixels
-      frame-title-format
+(setq frame-title-format
       '(:eval (if (buffer-file-name)
                   (abbreviate-file-name (buffer-file-name)) "%b")))
 
