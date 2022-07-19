@@ -1,10 +1,10 @@
 ;;; .emacs --- Emacs configuration file
-;;; Package-requires: ((emacs "27.1"))
+;;; Package-requires: ((emacs "28.1"))
 
 ;;; Commentary:
 
 ;;; Code:
-(let ((minver "28.0"))
+(let ((minver "28.1"))
   (when (version< emacs-version minver)
     (error "This config requires >=%s version of Emacs" minver)))
 
@@ -22,9 +22,9 @@
 (advice-add 'display-startup-echo-area-message :override #'ignore)
 
 (setq package-archives '(("gnu"          . "https://elpa.gnu.org/packages/")
+                         ("nongnu"       . "https://elpa.nongnu.org/nongnu/")
                          ("melpa"        . "https://melpa.org/packages/")
-                         ("melpa-stable" . "https://stable.melpa.org/packages/")
-                         ("org"          . "http://orgmode.org/elpa/")))
+                         ("melpa-stable" . "https://stable.melpa.org/packages/")))
 (package-initialize)
 
 (setq load-prefer-newer t)              ; Always load newer compiled files
@@ -173,7 +173,8 @@
 (setq pop-up-frame-function (lambda () (selected-frame)))
 (setq pop-up-windows nil)               ; No popup windows
 
-(setq frame-title-format
+(setq frame-resize-pixelwise t ; Resize by pixels
+      frame-title-format
       '(:eval (if (buffer-file-name)
                   (abbreviate-file-name (buffer-file-name)) "%b")))
 
@@ -325,124 +326,6 @@
   :bind (:map sh-mode-map
               ("M-s j"   . eshell-toggle))
   :init (setq sh-basic-offset 2))     ; The offset for nested indentation
-
-(use-package gnus
-  :ensure nil
-  :config
-  (require 'gnus-icalendar)
-  (setq gnus-inhibit-images t)
-  (setq gnus-icalendar-org-capture-file "~/files/org/todo.org")
-  (gnus-icalendar-setup)
-  (gnus-icalendar-org-setup))
-
-(use-package mu4e
-  :ensure nil
-  :commands mu4e
-  :hook ((message-mode . (lambda () ;; Use Org structures and tables in message mode
-                           (turn-on-orgtbl)))
-         (message-send . (lambda ()
-                           ;; (mml-secure-message-sign-encrypt)
-                           ;; (mml-secure-message-sign)
-                           ))
-         (mu4e-compose-mode . (lambda ()
-                                (set-fill-column 65)
-                                (flyspell-mode)
-                                (epa-mail-mode)))
-         (mu4e-view-mode . epa-mail-mode))
-  :config
-  (setq mu4e-view-use-gnus t)
-  (require 'mu4e-icalendar)
-  (require 'mu4e)
-  (mu4e-icalendar-setup)
-  (setq mu4e-maildir "~/mail"
-        mu4e-attachment-dir "~/tmp"
-        mu4e-compose-complete-only-personal t
-        mu4e-compose-dont-reply-to-self t
-        mu4e-compose-format-flowed t
-        mu4e-confirm-quit nil
-        mu4e-context-policy 'pick-first
-        mu4e-get-mail-command "getmail -rgetmail_home"
-        mu4e-headers-auto-update t
-        mu4e-headers-skip-duplicates t
-        mu4e-hide-index-messages t
-        mu4e-org-contacts-file "~/files/org/contacts.org"
-        mu4e-sent-folder "/"
-        mu4e-split-view 'same-window
-        mu4e-update-interval 180
-        mu4e-user-agent-string "Emacs"
-        mu4e-headers-include-related nil
-        mu4e-user-mail-address-list '("mankaev@gmail.com")
-        mu4e-view-image-max-width 800
-        mu4e-view-show-addresses t
-        mu4e-view-show-images nil)
-
-  (setq mu4e-contexts
-        `( ,(make-mu4e-context
-             :name "gmail"
-             :enter-func (lambda () (mu4e-message "Entering Gmail context"))
-             ;; we match based on the contact-fields of the message
-             :match-func (lambda (msg)
-                           (when msg
-                             (mu4e-message-contact-field-matches msg
-                                                                 :to "mankaev@gmail.com")))
-             :vars '( ( user-mail-address            . "mankaev@gmail.com")
-                      ( user-full-name               . "Ilya Mankaev")
-                      ( mu4e-compose-signature       . "Ilya Mankaev\n")
-                      ( system-name                  . "mankaev")
-                      ;; ( mu4e-sent-messages-behavior  . delete)
-                      ( epg-user-id                  . "C71CD9843FE0986C61CC26722CBACD9B90C9D091")
-                      ( smtpmail-stream-type         . starttls)
-                      ( smtpmail-default-smtp-server . "smtp.gmail.com")
-                      ( smtpmail-smtp-server         . "smtp.gmail.com")
-                      ( smtpmail-smtp-service        . 587)))))
-
-  (setq mu4e-headers-fields '((:human-date . 8)
-                              (:from . 35)
-                              (:thread-subject . 80))
-        mu4e-view-fields '(:from
-                           :to
-                           :cc
-                           :bcc
-                           :date
-                           :subject
-                           :signature
-                           :attachments))
-
-  (setq mu4e-bookmarks
-        `(("flag:unread AND NOT flag:trashed" "Unread messages" ?u)
-          ("date:today..now" "Today's messages" ?t)
-          ("date:7d..now" "Last 7 days" ?w)
-          ("mime:image/*" "Messages with images" ?p)
-          ("maildir:/trash" "Trash" ?s)
-          ("maildir:/drafts" "Drafts" ?d)))
-  (require 'smtpmail)
-  (setq mail-user-agent 'mu4e-user-agent
-        read-mail-command    'mu4e
-        gnus-dired-mail-mode 'mu4e-user-agent)
-  (setq message-send-mail-function 'smtpmail-send-it
-        message-required-mail-headers '(From Subject Date (optional . In-Reply-To))
-        mail-specify-envelope-from t ; Use from field to specify sender name.
-        message-kill-buffer-on-exit t
-        message-citation-line-format "On %a %d %b %Y at %R, %f wrote:\n"
-        message-citation-line-function 'message-insert-formatted-citation-line
-        message-cite-reply-position 'above
-        mail-envelope-from 'header) ; otherwise `user-mail-address' is used.
-  (setq mml2015-use 'epg
-        mml-secure-openpgp-encrypt-to-self t
-        mml-secure-openpgp-always-trust nil
-        mml-secure-cache-passphrase t
-        mml-secure-passphrase-cache-expiry '36000
-        mml-secure-openpgp-sign-with-sender t
-        mm-verify-option 'always
-        mm-decrypt-option 'always)
-
-  (add-to-list 'mu4e-view-actions
-               '("browse mail" . mu4e-action-view-in-browser) t)
-  (add-to-list 'mu4e-headers-actions
-               '("org-contact-add" . mu4e-action-add-org-contact) t)
-  (add-to-list 'mu4e-view-actions
-               '("org-contact-add" . mu4e-action-add-org-contact) t)
-  :diminish (overwrite-mode epa-mail-mode orgtbl-mode orgalist-mode mml-mode))
 
 (use-package eshell                     ; Emacs command shell
   :ensure nil
@@ -978,6 +861,7 @@ The app is chosen from your OS's preference."
   :diminish auto-revert-mode)
 
 (use-package company                    ; Auto-completion
+  :after flyspell
   :bind (([tab] . company-indent-or-complete-common)
          :map company-active-map
          ("C-n" . company-select-next)
@@ -1086,11 +970,7 @@ The app is chosen from your OS's preference."
 
 (use-package git-timemachine)           ; Git timemachine
 
-(use-package gitconfig-mode)            ; Git configuration mode
-
-(use-package gitignore-mode)            ; .gitignore mode
-
-(use-package gitattributes-mode)        ; Git attributes mode
+(use-package git-modes)                 ; Git modes
 
 (use-package tramp                      ; Remote editing
   :config
@@ -1101,13 +981,12 @@ The app is chosen from your OS's preference."
                (cons tramp-file-name-regexp nil)))
 
 (use-package org-contacts
-  :ensure org-plus-contrib
+  :ensure org
   :init
   (setq org-contacts-files '("~/files/org/contacts.org")
         org-contacts-matcher "EMAIL<>\"\"|ALIAS<>\"\"|PHONE<>\"\"|ADDRESS<>\"\"|BIRTHDAY"))
 
-(use-package org                        ; Org Plus Contributions
-  :ensure org-plus-contrib
+(use-package org                        ; Org Mode
   :hook ((org-mode . (lambda ()
                        (setq-local company-backends '(company-files company-dabbrev))))
          (org-babel-after-execute . org-display-inline-images))
@@ -1183,7 +1062,7 @@ The app is chosen from your OS's preference."
   (setq org-todo-keywords '("TODO(t)" "WAITING(w)" "|" "CANCELLED(c)" "DONE(d)")))
 
 (use-package org-capture                ; Fast note taking in Org
-  :ensure org-plus-contrib
+  :ensure org
   :config
   (setq org-capture-templates
         '(("w" "Web captures" entry (file+headline "~/files/org/notes.org" "Inbox")
@@ -1199,24 +1078,18 @@ The app is chosen from your OS's preference."
            "* TODO %^{Task}  %^G\n   %?"))))
 
 (use-package orgalist
-  :ensure org-plus-contrib)
+  :ensure org
+  )
 
 (use-package ox-html
-  :ensure org-plus-contrib
+  :ensure org
   :config
   ;; Turn off preamble and postamble in HTML export
   (setq org-html-preamble nil
         org-html-postamble nil))
 
-(use-package org-notify
-  :ensure org-plus-contrib
-  :hook (after-init . (lambda ()
-                        (require 'org-notify)
-                        (org-notify-start)
-                        (org-notify-add 'single '(:time "60m"  :actions -notify/window)))))
-
 (use-package ox
-  :ensure org-plus-contrib
+  :ensure org
   :config
   (setq org-export-with-timestamps nil
         org-export-with-smart-quotes t))
@@ -1648,14 +1521,6 @@ The app is chosen from your OS's preference."
         dash-docs-enable-debugging nil))
 
 (use-package guix)
-
-(use-package mu4e-alert
-  :after mu4e
-  :init
-  (setq mu4e-alert-email-notification-types '(subjects))
-  (mu4e-alert-set-default-style 'libnotify)
-  (mu4e-alert-enable-mode-line-display)
-  (mu4e-alert-enable-notifications))
 
 (use-package transmission
   :config

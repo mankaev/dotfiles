@@ -8,7 +8,7 @@ set $mod Mod4
 font pango:Pragmata Pro 10
 
 # Your preferred terminal emulator
-set $term termite
+set $term alacritty
 
 default_border pixel 0
 default_floating_border pixel 0
@@ -48,12 +48,11 @@ input 1:1:AT_Translated_Set_2_keyboard {
   repeat_delay 350
 }
 
-# input 4292:33032:YSPRINGTECH_USB_OPTICAL_MOUSE {
-#   natural_scroll enabled
-#   left_handed enabled
-#   scroll_factor 2
-#   dwt enabled
-# }
+input 4292:33032:YSPRINGTECH_USB_OPTICAL_MOUSE {
+  natural_scroll enabled
+  scroll_factor 2
+  dwt enabled
+}
 
 # start a terminal
 bindsym --to-code $mod+Return exec $term
@@ -64,9 +63,7 @@ bindsym --to-code $mod+Shift+k kill
 # Make the current focus fullscreen
 bindsym --to-code $mod+f fullscreen
 
-# Make the current focus fullscreen
-bindsym --to-code $mod+b border toggle
-bindsym --to-code $mod+t layout toggle tabbed splith
+bindsym --to-code $mod+t layout toggle tabbed splith splitv
 
 # restarts sway
 bindsym --to-code $mod+Shift+r restart
@@ -107,7 +104,7 @@ bindsym --to-code $mod+p exec wofi --show run
 bindsym --to-code $mod+m exec /home/halapenio/bin/passmenu
 
 # make screenshot
-bindsym --to-code $mod+Print exec grim screenshot.png
+bindsym --to-code $mod+Print exec grim ~/screenshot.png
 
 # move focused window
 bindsym --to-code $mod+l exec swaylock
@@ -116,11 +113,11 @@ bindsym --to-code $mod+j focus left
 bindsym --to-code $mod+k focus right
 
 # Increase sound volume
-bindsym --to-code XF86AudioRaiseVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') +3%
+bindsym --to-code XF86AudioRaiseVolume exec pactl set-sink-volume alsa_output.pci-0000_00_1b.0.analog-stereo +3%
 # Decrease sound volume
-bindsym --to-code XF86AudioLowerVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') -2%
+bindsym --to-code XF86AudioLowerVolume exec pactl set-sink-volume alsa_output.pci-0000_00_1b.0.analog-stereo -2%
 # Mute sound
-bindsym --to-code XF86AudioMute exec pactl set-sink-mute $(pacmd list-sinks |awk '/* index:/{print $3}') toggle
+bindsym --to-code XF86AudioMute exec pactl set-sink-mute alsa_output.pci-0000_00_1b.0.analog-stereo toggle
 
 # Accept phone call by adb
 bindsym --to-code XF86Explorer exec adb shell input keyevent 5
@@ -139,13 +136,14 @@ bindsym --to-code $mod+Ctrl+j exec mpc next
 bindsym --to-code $mod+Ctrl+h exec mpc seek -00:00:05
 bindsym --to-code $mod+Ctrl+l exec mpc seek +00:00:05
 
-assign [class="Emacs"]        1
-assign [app_id="termite"]     2
-assign [app_id="firefox"]     3
-assign [app_id="Chromium"]    4
-assign [app_id="calibre-gui"] 5
-assign [app_id="shotwell"]    6
-assign [app_id="psi+"]        7
+assign [app_id="emacs"]           1
+assign [app_id="Alacritty"]       2
+assign [app_id="firefox"]         3
+assign [app_id="Chromium"]        3
+assign [app_id="evolution"]       4
+assign [app_id="telegramdesktop"] 4
+assign [app_id="calibre-gui"]     5
+assign [app_id="shotwell"]        6
 
 exec xrdb -load ~/.Xresources
 
@@ -157,9 +155,11 @@ exec swayidle -w \
 
 exec emacs
 exec mako
-exec termite
+exec $term
 exec firefox
 exec calibre
+exec telegram-desktop
+exec evolution
 
 exec sudo rfkill unblock all
 exec sudo systemctl restart iwd
